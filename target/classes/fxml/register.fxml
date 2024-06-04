@@ -5,8 +5,9 @@
 <?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.image.ImageView?>
 
-<VBox alignment="CENTER" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="350.0" prefWidth="250.0" xmlns="http://javafx.com/javafx/11.0.2" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.chat.RegisterController">
+<VBox alignment="CENTER" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="450.0" prefWidth="250.0" xmlns="http://javafx.com/javafx/11.0.2" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.chat.RegisterController">
     <children>
         <Label text="Username:" />
         <TextField fx:id="usernameField" />
@@ -18,6 +19,9 @@
         <PasswordField fx:id="passwordField" />
         <Label text="Confirm Password:" />
         <PasswordField fx:id="confirmPasswordField" />
+        <Label text="Profile Picture:" />
+        <Button fx:id="chooseImageButton" mnemonicParsing="false" onAction="#handleChooseImage" text="Choose Image" />
+        <ImageView fx:id="profilePictureView" fitHeight="100.0" fitWidth="100.0" />
         <Button fx:id="registerButton" mnemonicParsing="false" onAction="#handleRegister" text="Register" />
         <Button fx:id="backButton" mnemonicParsing="false" onAction="#handleBack" text="Back to Login" />
         <Label fx:id="errorLabel" textFill="RED" />

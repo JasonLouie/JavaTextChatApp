@@ -34,8 +34,36 @@ public class Database {
         return result.next();
     }
 
-    public void registerUser(String username, String nickname, String email, String password) throws SQLException {
-        update("INSERT INTO Users (username, nickname, email, password) VALUES (?, ?, ?, ?)", new String[]{username, nickname, email, password});
+    public void registerUser(String username, String nickname, String email, String password, String profilePicturePath) throws SQLException {
+        int userId = insertUser(username, nickname, email, password);
+        insertProfile(userId, profilePicturePath);
+    }
+
+    private int insertUser(String username, String nickname, String email, String password) throws SQLException {
+        String query = "INSERT INTO Users (username, nickname, email, password) VALUES (?, ?, ?, ?)";
+        try (PreparedStatement statement = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+            statement.setString(1, username);
+            statement.setString(2, nickname);
+            statement.setString(3, email);
+            statement.setString(4, password);
+            int affectedRows = statement.executeUpdate();
+
+            if (affectedRows == 0) {
+                throw new SQLException("Inserting user failed, no rows affected.");
+            }
+
+            try (ResultSet generatedKeys = statement.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    return generatedKeys.getInt(1);
+                } else {
+                    throw new SQLException("Inserting user failed, no ID obtained.");
+                }
+            }
+        }
+    }
+
+    private void insertProfile(int userId, String profilePicturePath) throws SQLException {
+        update("INSERT INTO UserProfile (user_id, profile_picture, bio, status) VALUES (?, ?, ?, ?)", new String[]{String.valueOf(userId), profilePicturePath, "", "Online"});
     }
 
     public boolean verifyUserPassword(String username, String password) throws SQLException {

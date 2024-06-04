@@ -112,6 +112,19 @@ public class Client extends Application {
         }
     }
 
+    private void sendFile(File file) throws IOException {
+        output.writeUTF(file.getName());
+        output.writeLong(file.length());
+        try (FileInputStream fileInputStream = new FileInputStream(file)) {
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = fileInputStream.read(buffer)) != -1) {
+                output.write(buffer, 0, bytesRead);
+            }
+        }
+        output.flush();
+    }
+
     public synchronized String login(String username, String password) throws IOException {
         System.out.println("Logging in...");
         output.writeUTF("login");
@@ -129,7 +142,7 @@ public class Client extends Application {
         }
     }
 
-    public synchronized String register(String username, String nickname, String email, String password) throws IOException {
+    public synchronized String register(String username, String nickname, String email, String password, File profilePicture) throws IOException {
         System.out.println("Registering...");
         output.writeUTF("register");
         output.flush(); // Ensure the data is sent immediately
@@ -141,6 +154,7 @@ public class Client extends Application {
         output.flush(); // Ensure the data is sent immediately
         output.writeUTF(password);
         output.flush(); // Ensure the data is sent immediately
+        sendFile(profilePicture);
         try {
             return messageQueue.take(); // Wait and take the response from the queue
         } catch (InterruptedException e) {

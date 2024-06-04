@@ -9,6 +9,7 @@ public class User {
     private String username;
     private String nickname;
     private String email;
+    @SuppressWarnings("unused")
     private byte[] password;
 
     public User(int id, String username, String nickname, String email, byte[] password) {

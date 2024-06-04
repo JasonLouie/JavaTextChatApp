@@ -10,6 +10,8 @@
     <children>
         <TabPane fx:id="tabPane" prefHeight="400.0" prefWidth="600.0">
             <tabs>
+                <Tab fx:id="homeTab" text="Home">
+                    <!-- Home view here -->
                 <Tab fx:id="friendsTab" text="Friends">
                     <!-- Friends list view here -->
                 </Tab>

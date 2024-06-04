@@ -103,12 +103,23 @@ public class Server {
             String nickname = input.readUTF();
             String email = input.readUTF();
             String password = input.readUTF();
+            String fileName = input.readUTF();
+            long fileSize = input.readLong();
+            File profilePicture = new File("profile_pictures/" + fileName);
+            try (FileOutputStream fileOutputStream = new FileOutputStream(profilePicture)) {
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+                while (fileSize > 0 && (bytesRead = input.read(buffer, 0, (int) Math.min(buffer.length, fileSize))) != -1) {
+                    fileOutputStream.write(buffer, 0, bytesRead);
+                    fileSize -= bytesRead;
+                }
+            }
             if (database.checkUserExists(username, email)) {
                 System.out.println("User exists");
                 output.writeUTF("user_already_exists");
                 output.flush();
             } else {
-                database.registerUser(username, nickname, email, password);
+                database.registerUser(username, nickname, email, password, profilePicture.getAbsolutePath());
                 System.out.println("User created");
                 output.writeUTF("success");
                 output.flush();
