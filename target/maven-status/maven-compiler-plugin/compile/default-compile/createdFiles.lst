@@ -1,0 +1,9 @@
+com\chat\FriendsController.class
+com\chat\Database.class
+com\chat\RegisterController.class
+com\chat\LoginController.class
+com\chat\User.class
+com\chat\Client.class
+com\chat\Server$ClientThread.class
+com\chat\HomeController.class
+com\chat\Server.class
