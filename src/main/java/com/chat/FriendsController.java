@@ -5,10 +5,14 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import java.io.*;
+import java.util.*;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class FriendsController {
     private Client client;
-
+    private static final Logger logger = LoggerFactory.getLogger(FriendsController.class);
     @FXML
     private ListView<String> friendsListView;
     @FXML
@@ -19,15 +23,30 @@ public class FriendsController {
     }
 
     public void initialize() {
-        try {
-            String response = client.getFriends();
-            if (response.isEmpty()) {
-                noFriendsLabel.setVisible(true);
-            } else {
-                friendsListView.getItems().addAll(response.split(","));
+        new Thread(() -> {
+            try {
+                List<UserProfile> friends = client.getFriends();
+                Platform.runLater(() -> displayFriends(friends));
+            } catch (IOException e) {
+                logger.error("Error getting friends", e);
+                Platform.runLater(() -> displayError("Error getting friends: " + e.getMessage()));
             }
-        } catch (IOException e) {
-            noFriendsLabel.setText("Error getting friends: " + e.getMessage());
+        }).start();
+    }
+    
+    private void displayFriends(List<UserProfile> friends) {
+        friendsListView.getItems().clear();
+        if (friends.isEmpty()) {
+            noFriendsLabel.setVisible(true);
+        } else {
+            for (UserProfile friend : friends) {
+                friendsListView.getItems().add(friend.getUsername());
+            }
         }
+    }
+    
+    private void displayError(String message) {
+        noFriendsLabel.setText(message);
+        noFriendsLabel.setVisible(true);
     }
 }

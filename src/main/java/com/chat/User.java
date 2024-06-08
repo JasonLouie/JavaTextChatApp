@@ -2,6 +2,7 @@ package com.chat;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+
 import java.nio.charset.StandardCharsets;
 
 public class User {
@@ -18,6 +19,14 @@ public class User {
         this.nickname = nickname;
         this.email = email;
         this.password = password;
+    }
+
+    public User(String username){
+        this.username = username;
+    }
+
+    public User() {
+        
     }
 
     public static byte[] hashPassword(String password) {
@@ -43,5 +52,17 @@ public class User {
 
     public String getEmail() {
         return email;
+    }
+
+    public void setId(int id){
+        this.id = id;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public void setNickname(String nickname) {
+        this.nickname = nickname;
     }
 }
