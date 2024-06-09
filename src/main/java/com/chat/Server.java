@@ -12,7 +12,8 @@ public class Server {
     private ServerSocket serverSocket;
     private Database database;
     private List<ClientThread> clients;
-    private volatile boolean running;
+    private boolean running;
+    private int port;
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
 
     public Server(int port) throws IOException, SQLException {
@@ -20,10 +21,7 @@ public class Server {
         database = new Database();
         clients = new ArrayList<>();
         running = true;
-    }
-
-    public Server() throws IOException, SQLException {
-        this(8000);
+        this.port = port;
     }
 
     public Logger getLogger() {
@@ -34,21 +32,21 @@ public class Server {
         int port = 8000; // Default port number
         try {
             Server server = new Server(port);
-            System.out.println("Server started on port " + port);
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 try {
                     server.close();
                 } catch (Exception e) {
-                    System.out.println("Error closing server: " + e.getMessage());
+                    logger.error("Error closing server: " + e.getMessage());
                 }
             }));
             server.start();
         } catch (IOException | SQLException e) {
-            System.out.println("Error starting server: " + e.getMessage());
+            logger.error("Error starting server: " + e.getMessage());
         }
     }
 
     public void start() {
+        logger.info("Server started on port " + port);
         while (running) {
             try {
                 Socket socket = serverSocket.accept();
@@ -58,7 +56,7 @@ public class Server {
                 client.start();
             } catch (IOException e) {
                 if (!running) break; // Ignore errors if we are stopping the server
-                System.out.println("Error accepting client connection: " + e.getMessage());
+                logger.error("Error accepting client connection: " + e.getMessage());
             }
         }
     }
@@ -68,7 +66,7 @@ public class Server {
         try {
             serverSocket.close();
         } catch (IOException e) {
-            System.out.println("Error closing server socket: " + e.getMessage());
+            logger.error("Error closing server socket: " + e.getMessage());
         }
         for (ClientThread client : clients) {
             client.close();
@@ -81,6 +79,7 @@ public class Server {
         private User user;
         private ObjectInputStream input;
         private ObjectOutputStream output;
+        private boolean connected = true;
 
         public ClientThread(Socket socket, Database database) {
             this.socket = socket;
@@ -88,6 +87,7 @@ public class Server {
         }
 
         private synchronized void sendUTF(String message) throws IOException {
+            logger.info("Sending UTF message: " + message);
             output.writeUTF(message);
             output.flush();
         }
@@ -97,6 +97,7 @@ public class Server {
         }
 
         private synchronized void sendLong(long value) throws IOException {
+            logger.info("Sending long value: " + value);
             output.writeLong(value);
             output.flush();
         }
@@ -106,6 +107,7 @@ public class Server {
         }
 
         private synchronized void sendInt(int value) throws IOException {
+            logger.info("Sending int value: " + value);
             output.writeInt(value);
             output.flush();
         }
@@ -118,94 +120,95 @@ public class Server {
             try {
                 input = new ObjectInputStream(socket.getInputStream());
                 output = new ObjectOutputStream(socket.getOutputStream());
-                while (true) {
+                output.flush();
+                while (running && connected) {
                     String command = receiveUTF();
-                    System.out.println("New command");
                     switch (command) {
                         case "login":
                             try {
-                                System.out.println("Login attempted");
-                                login(input, output);
+                                logger.info("Login attempted");
+                                login();
                             } catch (IOException | SQLException e) {
-                                System.out.println("Login error: " + e);
+                                logger.error("Login error: " + e);
                             }
                             break;
                         case "register":
                             try {
-                                System.out.println("Registration attempted");
-                                register(input, output);
+                                logger.info("Registration attempted");
+                                register();
                             } catch (IOException | SQLException e) {
-                                System.out.println("Registration error: " + e);
+                                logger.error("Registration error: " + e);
                             }
                             break;
                         case "get_friends":
-                            getFriends(input, output);
+                            getFriends();
                             break;
                         case "logout":
                             try {
-                                System.out.println("Initiated logout");
-                                logout(input, output);
+                                logger.info("Initiated logout");
+                                logout();
                             } catch (IOException | SQLException e) {
-                                System.out.println("Logout error: " + e);
+                                logger.error("Logout error: " + e);
                             }
                             break;
                         case "search_users":
                             try {
-                                System.out.println("Searching for users...");
-                                searchUsers(input, output);
+                                logger.info("Searching for users...");
+                                searchUsers();
                             } catch (IOException | SQLException e) {
-                                System.out.println("Searching error: " + e);
+                                logger.error("Searching error: " + e);
                             }
                             break;
                         case "get_conversations":
                             try {
-                                System.out.println("Getting conversations for user...");
-                                getConversations(input, output);
+                                logger.info("Getting conversations for user...");
+                                getConversations();
                             } catch (IOException | SQLException e) {
-                                System.out.println("Getting conversations error: " + e);
+                                logger.error("Getting conversations error: " + e);
                             }
                             break;
                         case "get_conversation":
                             try {
-                                System.out.println("Getting a particular conversation...");
-                                getConversation(input, output);
+                                logger.info("Getting a particular conversation...");
+                                getConversation();
                             } catch (IOException | SQLException e) {
-                                System.out.println("Error getting conversation: " + e);
+                                logger.error("Error getting conversation: " + e);
                             }
                             break;
                     }
                 }
             } catch (IOException | SQLException e) {
-                System.out.println("Error handling client connection: " + e.getMessage());
+                logger.error("Error handling client connection: " + e.getMessage());
             } finally {
                 close();
             }
         }
 
         public void close() {
+            connected = false;
             try {
                 socket.close();
                 input.close();
                 output.close();
             } catch (IOException e) {
-                System.out.println("Error closing client connection: " + e.getMessage());
+                logger.error("Error closing client connection: " + e.getMessage());
             }
         }
 
-        private void login(ObjectInputStream input, ObjectOutputStream output) throws IOException, SQLException {
+        private void login() throws IOException, SQLException {
             String username = receiveUTF();
             String password = receiveUTF();
             if (database.verifyUserPassword(username, password)) {
-                System.out.println("Login success");
+                logger.info("Login success");
                 sendUTF("success");
-                sendUserProfile(output, database.getUserProfile(username));
+                sendUserProfile(database.getUserProfile(username));
             } else {
-                System.out.println("Failed login");
+                logger.info("Failed login");
                 sendUTF("Incorrect username or password");
             }
         }
 
-        private void register(ObjectInputStream input, ObjectOutputStream output) throws IOException, SQLException {
+        private void register() throws IOException, SQLException {
             String username = receiveUTF();
             String nickname = receiveUTF();
             String email = receiveUTF();
@@ -230,21 +233,28 @@ public class Server {
             } else {
                 database.registerUser(username, nickname, email, password, profilePicture.getAbsolutePath());
                 sendUTF("success");
-                sendUserProfile(output, database.getUserProfile(username));
+                sendUserProfile(database.getUserProfile(username));
             }
         }
 
-        private void logout(ObjectInputStream input, ObjectOutputStream output) throws IOException, SQLException {
+        private void logout() throws IOException, SQLException {
             database.logout(user.getId());
             sendUTF("success");
-            System.out.println("User id " + user.getId() + " logged out successfully");
+            logger.info("User id " + user.getId() + " logged out successfully");
         }
 
-        private void searchUsers(ObjectInputStream input, ObjectOutputStream output) throws IOException, SQLException {
+        private void searchUsers() throws IOException, SQLException {
             try {
                 String query = receiveUTF();
                 List<UserProfile> results = database.searchUsers(query);
-                sendUserProfiles(output, results);
+                logger.info("Found " + results.size() + " users matching the query: " + query);
+                if (results.isEmpty()) {
+                    sendUTF("no_results");
+                    logger.info("No users exist with a username or nickname like " + query);
+                } else {
+                    logger.info("Sent the list of users with a username or nickname ");
+                    sendUserProfiles(results);
+                }
             } catch (SQLException e) {
                 logger.error("Error searching users", e);
                 sendUTF("error");
@@ -252,11 +262,12 @@ public class Server {
             }
         }
 
-        private void getFriends(ObjectInputStream input, ObjectOutputStream output) throws IOException, SQLException {
+        private void getFriends() throws IOException, SQLException {
             try {
                 int userId = receiveInt();
                 List<UserProfile> friends = database.getFriends(userId);
-                sendUserProfiles(output, friends);
+                logger.info("Sent the list of friends to user");
+                sendUserProfiles(friends);
             } catch (SQLException e) {
                 logger.error("Error getting friends", e);
                 sendUTF("error");
@@ -264,11 +275,11 @@ public class Server {
             }
         }
 
-        private void getConversation(ObjectInputStream input, ObjectOutputStream output) throws IOException, SQLException {
+        private void getConversation() throws IOException, SQLException {
             int userId = receiveInt();
-            List<Message> conversations = database.getConversation(userId);
+            List<Content> conversations = database.getConversation(userId);
             output.writeInt(conversations.size());
-            for (Message message : conversations) {
+            for (Content message : conversations) {
                 sendInt(message.getSenderId());
                 sendInt(message.getReceiverId());
                 sendUTF(message.getMessage());
@@ -276,40 +287,45 @@ public class Server {
             output.flush();
         }
 
-        private void getConversations(ObjectInputStream input, ObjectOutputStream output) throws IOException, SQLException {
+        private void getConversations() throws IOException, SQLException {
             int userId = receiveInt();
             List<Conversation> conversations = database.getConversations(userId);
             output.writeInt(conversations.size());
             for (Conversation conversation : conversations) {
                 sendUTF(conversation.getUsername());
-                sendFile(conversation.getProfilePicture(), output);
+                sendFile(conversation.getProfilePicture());
                 sendUTF(conversation.getLastMessage());
             }
             output.flush();
         }
 
-        private void sendUserProfile(ObjectOutputStream output, UserProfile profile) throws IOException {
+        private void sendUserProfile(UserProfile profile) throws IOException {
+            logger.info("Sending user profile...");
             sendUTF(profile.getUsername());
             sendUTF(profile.getNickname());
-            sendFile(profile.getProfilePicture(), output);
+            sendFile(profile.getProfilePicture());
+            sendUTF(profile.getBio());
+            sendUTF(profile.getStatus());
+            logger.info("User profile sent");
         }
 
-        private void sendUserProfiles(ObjectOutputStream output, List<UserProfile> profiles) throws IOException {
+        private void sendUserProfiles(List<UserProfile> profiles) throws IOException {
             output.writeInt(profiles.size());
             for (UserProfile profile : profiles) {
                 sendUTF(profile.getUsername());
                 sendUTF(profile.getNickname());
-                sendFile(profile.getProfilePicture(), output);
+                sendFile(profile.getProfilePicture());
                 sendUTF(profile.getBio());
                 sendUTF(profile.getStatus());
             }
             output.flush();
         }
 
-        private void sendFile(File file, ObjectOutputStream output) throws IOException {
+        private void sendFile(File file) throws IOException {
             if (!file.exists() || !file.isFile()) {
                 throw new FileNotFoundException("File not found: " + file.getAbsolutePath());
             }
+            logger.info("Sending file: " + file.getAbsolutePath());
             sendUTF(file.getName());
             sendLong(file.length());
             try (FileInputStream fileInputStream = new FileInputStream(file)) {
@@ -319,6 +335,8 @@ public class Server {
                     output.write(buffer, 0, bytesRead);
                 }
             }
-        }
+            output.flush();
+            logger.info("File sent: " + file.getAbsolutePath());
+        }        
     }
 }

@@ -1,4 +1,4 @@
-package com.chat;
+package com.chat.controller;
 
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -9,6 +9,9 @@ import java.util.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.chat.Client;
+import com.chat.UserProfile;
 
 public class FriendsController {
     private Client client;

@@ -144,17 +144,17 @@ public class Database {
      }
      
 
-    public List<Message> getConversation(int userId) throws SQLException {
+    public List<Content> getConversation(int userId) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("SELECT * FROM Messages WHERE sender_id = ? OR receiver_id = ?")) {
             statement.setInt(1, userId);
             statement.setInt(2, userId);
             try (ResultSet result = statement.executeQuery()) {
-                List<Message> conversations = new ArrayList<>();
+                List<Content> conversations = new ArrayList<>();
                 while (result.next()) {
                     int senderId = result.getInt("sender_id");
                     int receiverId = result.getInt("receiver_id");
                     String message = result.getString("message");
-                    conversations.add(new Message(senderId, receiverId, message));
+                    conversations.add(new Content(senderId, receiverId, message));
                 }
                 return conversations;
             }

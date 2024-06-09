@@ -1,4 +1,4 @@
-package com.chat;
+package com.chat.controller;
 
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -19,6 +19,10 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.chat.Client;
+import com.chat.Conversation;
+import com.chat.UserProfile;
 
 public class HomeController {
     private Client client;

@@ -1,4 +1,4 @@
-package com.chat;
+package com.chat.controller;
 
 import javafx.fxml.FXML;
 import javafx.application.Platform;
@@ -10,6 +10,8 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.stage.FileChooser;
 import java.io.*;
+
+import com.chat.Client;
 
 public class RegisterController {
     private Client client;
