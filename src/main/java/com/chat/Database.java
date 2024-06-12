@@ -4,10 +4,19 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.chat.models.Content;
+import com.chat.models.Conversation;
+import com.chat.models.UserProfile;
+
 import java.io.File;
 
 public class Database {
     private Connection connection;
+    private static final Logger logger = LoggerFactory.getLogger(Database.class);
+
 
     public Database() throws SQLException {
         connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/chatdb", "root", "password");
@@ -33,8 +42,26 @@ public class Database {
         connection.close();
     }
 
+    public void setStatusOnline(int userId) throws SQLException {
+        String sql = "UPDATE UserProfile SET status = 'Online' WHERE user_id = ?";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, userId);
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            logger.error("Error setting status online for user with ID " + userId, e);
+            throw e;
+        }
+    }
+
     public void logout(int userId) throws SQLException {
-        update("UPDATE Users SET status = 'Offline' WHERE id = ?", new String[]{String.valueOf(userId)});
+        String sql = "UPDATE UserProfile SET status = 'Offline' WHERE user_id = ?";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, userId);
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            logger.error("Error while logging out user with ID " + userId, e);
+            throw e;
+        }
     }
 
     public boolean checkUserExists(String username, String email) throws SQLException {
@@ -78,19 +105,47 @@ public class Database {
         ResultSet result = query("SELECT password FROM Users WHERE username = ?", new String[]{username});
         if (result.next()) {
             String storedPassword = result.getString("password");
+            
             return password.equals(storedPassword);
         }
         return false;
     }
 
+    public boolean checkUserExists(int userId) throws SQLException {
+        PreparedStatement statement = connection.prepareStatement("SELECT * FROM users WHERE id = ?");
+        statement.setInt(1, userId);
+        ResultSet resultSet = statement.executeQuery();
+        return resultSet.next();
+    }
+
+    public boolean checkConversationExists(int senderId, int receiverId) throws SQLException {
+        PreparedStatement statement = connection.prepareStatement("SELECT * FROM messages WHERE sender_id = ? AND receiver_id = ?");
+        statement.setInt(1, senderId);
+        statement.setInt(2, receiverId);
+        ResultSet resultSet = statement.executeQuery();
+        return resultSet.next();
+    }
+
     public List<UserProfile> searchUsers(String query) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement("SELECT u.username, u.nickname, up.profile_picture, up.bio, up.status FROM Users u JOIN UserProfile up ON u.id = up.user_id WHERE u.username LIKE ? OR u.nickname LIKE ?")) {
+        String sql = "SELECT u.id, u.username, u.nickname, up.bio, up.status, up.profile_picture " +
+                     "FROM Users u JOIN UserProfile up ON u.id = up.user_id " +
+                     "WHERE u.username LIKE ? OR u.nickname LIKE ?";
+        
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, "%" + query + "%");
             statement.setString(2, "%" + query + "%");
+            
             try (ResultSet result = statement.executeQuery()) {
                 List<UserProfile> results = new ArrayList<>();
                 while (result.next()) {
-                    UserProfile userProfile = new UserProfile(result.getString("username"), result.getString("nickname"), new File(result.getString("profile_picture")), result.getString("bio"), result.getString("status"));
+                    UserProfile userProfile = new UserProfile(
+                        result.getInt("id"),
+                        result.getString("username"),
+                        result.getString("nickname"),
+                        result.getString("bio"),
+                        result.getString("status"),
+                        new File(result.getString("profile_picture"))
+                    );
                     results.add(userProfile);
                 }
                 return results;
@@ -99,11 +154,11 @@ public class Database {
     }
 
     public UserProfile getUserProfile(String username) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement("SELECT u.nickname, up.profile_picture, up.bio, up.status FROM Users u JOIN UserProfile up ON u.id = up.user_id WHERE u.username = ?")) {
+        try (PreparedStatement statement = connection.prepareStatement("SELECT u.id, u.nickname, up.profile_picture, up.bio, up.status FROM Users u JOIN UserProfile up ON u.id = up.user_id WHERE u.username = ?")) {
             statement.setString(1, username);
             try (ResultSet result = statement.executeQuery()) {
                 if (result.next()) {
-                    return new UserProfile(username, result.getString("nickname"), new File(result.getString("profile_picture")), result.getString("bio"), result.getString("status"));
+                    return new UserProfile(result.getInt("id"), username, result.getString("nickname"), result.getString("bio"), result.getString("status"), new File(result.getString("profile_picture")));
                 } else {
                     return null;
                 }
@@ -112,12 +167,26 @@ public class Database {
     }
 
     public List<UserProfile> getFriends(int userId) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement("SELECT u.username, u.nickname, up.profile_picture, up.bio, up.status FROM Users u JOIN UserProfile up ON u.id = up.user_id WHERE u.id IN (SELECT friend_id FROM Friendships WHERE user_id = ?)")) {
+        try (PreparedStatement statement = connection.prepareStatement("SELECT u.id, u.username, u.nickname, up.profile_picture, up.bio, up.status FROM Users u JOIN UserProfile up ON u.id = up.user_id WHERE u.id IN (SELECT friend_id FROM Friendships WHERE user_id = ?)")) {
             statement.setInt(1, userId);
             try (ResultSet result = statement.executeQuery()) {
                 List<UserProfile> friends = new ArrayList<>();
                 while (result.next()) {
-                    UserProfile userProfile = new UserProfile(result.getString("username"), result.getString("nickname"), new File(result.getString("profile_picture")), result.getString("bio"), result.getString("status"));
+                    UserProfile userProfile = new UserProfile(result.getInt("id"), result.getString("username"), result.getString("nickname"), result.getString("bio"), result.getString("status"), new File(result.getString("profile_picture")));
+                    friends.add(userProfile);
+                }
+                return friends;
+            }
+        }
+    }
+
+    public List<UserProfile> getFriendRequests(int userId) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("SELECT u.id, u.username, u.nickname, up.profile_picture, up.bio, up.status FROM Users u JOIN UserProfile up ON u.id = up.user_id WHERE u.id IN (SELECT sender_id FROM Friendships WHERE receiver_id = ?)")) {
+            statement.setInt(1, userId);
+            try (ResultSet result = statement.executeQuery()) {
+                List<UserProfile> friends = new ArrayList<>();
+                while (result.next()) {
+                    UserProfile userProfile = new UserProfile(result.getInt("id"), result.getString("username"), result.getString("nickname"), result.getString("bio"), result.getString("status"), new File(result.getString("profile_picture")));
                     friends.add(userProfile);
                 }
                 return friends;
@@ -126,38 +195,159 @@ public class Database {
     }
 
     public List<Conversation> getConversations(int userId) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement("SELECT u.username, up.profile_picture, m.message FROM Users u JOIN UserProfile up ON u.id = up.user_id JOIN Messages m ON u.id = m.sender_id OR u.id = m.receiver_id WHERE m.sender_id = ? OR m.receiver_id = ? GROUP BY u.id")) {
+        String sql = "SELECT " +
+                    "u1.username AS sender_username, " +
+                    "u2.username AS receiver_username, " +
+                    "up1.profile_picture AS sender_profile_picture, " +
+                    "up2.profile_picture AS receiver_profile_picture, " +
+                    "m.message, " +
+                    "m.sender_id, " +
+                    "m.receiver_id " +
+                    "FROM Messages m " +
+                    "JOIN Users u1 ON m.sender_id = u1.id " +
+                    "JOIN Users u2 ON m.receiver_id = u2.id " +
+                    "JOIN UserProfile up1 ON u1.id = up1.user_id " +
+                    "JOIN UserProfile up2 ON u2.id = up2.user_id " +
+                    "WHERE m.id IN ( " +
+                    "    SELECT sub.id " +
+                    "    FROM Messages sub " +
+                    "    WHERE (sub.sender_id = ? OR sub.receiver_id = ?) " +
+                    "    ORDER BY sub.timestamp DESC " +
+                    "    LIMIT 1 " +
+                    ") " +
+                    "GROUP BY u1.id, u2.id";
+    
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, userId);
             statement.setInt(2, userId);
             try (ResultSet result = statement.executeQuery()) {
                 List<Conversation> conversations = new ArrayList<>();
                 while (result.next()) {
-                    String username = result.getString("username");
-                    File profilePicture = new File (result.getString("profile_picture"));
+                    String senderUsername = result.getString("sender_username");
+                    String receiverUsername = result.getString("receiver_username");
+                    File senderProfilePicture = new File(result.getString("sender_profile_picture"));
+                    File receiverProfilePicture = new File(result.getString("receiver_profile_picture"));
                     String lastMessage = result.getString("message");
-                    Conversation conversation = new Conversation(username, profilePicture, lastMessage);
+
+                    File otherProfilePicture;
+                    if (userId == result.getInt("sender_id")) {
+                        otherProfilePicture = receiverProfilePicture;
+                    } else {
+                        otherProfilePicture = senderProfilePicture;
+                    }
+    
+                    Conversation conversation = new Conversation(senderUsername, receiverUsername, lastMessage, otherProfilePicture);
                     conversations.add(conversation);
                 }
                 return conversations;
             }
         }
-     }
-     
+    }
 
     public List<Content> getConversation(int userId) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement("SELECT * FROM Messages WHERE sender_id = ? OR receiver_id = ?")) {
+        String sql = "SELECT u1.username AS sender_username, u2.username AS receiver_username, m.message, m.timestamp " +
+                        "FROM Messages m " +
+                        "JOIN Users u1 ON m.sender_id = u1.id " +
+                        "JOIN Users u2 ON m.receiver_id = u2.id " +
+                        "WHERE m.sender_id = ? OR m.receiver_id = ? " +
+                        "ORDER BY m.timestamp";
+
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, userId);
             statement.setInt(2, userId);
             try (ResultSet result = statement.executeQuery()) {
                 List<Content> conversations = new ArrayList<>();
                 while (result.next()) {
-                    int senderId = result.getInt("sender_id");
-                    int receiverId = result.getInt("receiver_id");
+                    String senderUsername = result.getString("sender_username");
+                    String receiverUsername = result.getString("receiver_username");
                     String message = result.getString("message");
-                    conversations.add(new Content(senderId, receiverId, message));
+                    Timestamp timestamp = result.getTimestamp("timestamp");
+                    conversations.add(new Content(senderUsername, receiverUsername, message, timestamp));
                 }
                 return conversations;
             }
+        }
+    }
+
+    public boolean areFriends(int userId, int friendId) throws SQLException {
+        String query = "SELECT * FROM friends WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)";
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setInt(1, userId);
+            statement.setInt(2, friendId);
+            statement.setInt(3, friendId);
+            statement.setInt(4, userId);
+            try (ResultSet result = statement.executeQuery()) {
+                return result.next();
+            }
+        }
+    }
+    
+    public boolean checkFriendRequestExists(int senderId, int receiverId) throws SQLException {
+        String query = "SELECT * FROM friend_requests WHERE sender_id = ? AND receiver_id = ?";
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setInt(1, senderId);
+            statement.setInt(2, receiverId);
+            try (ResultSet result = statement.executeQuery()) {
+                return result.next();
+            }
+        }
+    }
+
+    public boolean hasFriendRequest(int receiverId) throws SQLException {
+        String query = "SELECT * FROM friend_requests WHERE receiver_id = ?";
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setInt(1, receiverId);
+            try (ResultSet result = statement.executeQuery()) {
+                return result.next();
+            }
+        }
+    }
+
+    public boolean sendFriendRequest(int senderId, int receiverId) throws SQLException {
+        String query = "INSERT INTO FriendRequests (sender_id, receiver_id) VALUES (?, ?)";
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setInt(1, senderId);
+            statement.setInt(2, receiverId);
+            return statement.executeUpdate() > 0;
+        }
+    }
+
+    // Add these two methods to the Database class
+    public void acceptFriendRequest(int senderId, int receiverId) throws SQLException {
+        // Remove the friend request
+        PreparedStatement statement = connection.prepareStatement("DELETE FROM FriendRequests WHERE sender_id = ? AND receiver_id = ?");
+        statement.setInt(1, senderId);
+        statement.setInt(2, receiverId);
+        statement.executeUpdate();
+
+        // Add the friendship
+        statement = connection.prepareStatement("INSERT INTO Friendships (user_id, friend_id) VALUES (?, ?)");
+        statement.setInt(1, senderId);
+        statement.setInt(2, receiverId);
+        statement.executeUpdate();
+        statement.setInt(1, receiverId);
+        statement.setInt(2, senderId);
+        statement.executeUpdate();
+    }
+    
+    // Used to cancel or deny a friend request
+    public boolean denyFriendRequest(int senderId, int receiverId) throws SQLException {
+        String query = "DELETE FROM FriendRequests WHERE sender_id = ? AND receiver_id = ?";
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setInt(1, senderId);
+            statement.setInt(2, receiverId);
+            return statement.executeUpdate() > 0;
+        }
+    }
+
+    public boolean removeFriend(int userId, int friendId) throws SQLException {
+        String query = "DELETE FROM Friendships WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)";
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setInt(1, userId);
+            statement.setInt(2, friendId);
+            statement.setInt(3, friendId);
+            statement.setInt(4, userId);
+            return statement.executeUpdate() > 0;
         }
     }
 }

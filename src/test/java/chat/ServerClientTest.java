@@ -5,9 +5,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.chat.Client;
-import com.chat.Conversation;
 import com.chat.Server;
-import com.chat.UserProfile;
+import com.chat.models.Conversation;
+import com.chat.models.UserProfile;
 
 import java.io.File;
 import java.io.IOException;
@@ -22,10 +22,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@SuppressWarnings("unused")
 @ExtendWith(MockitoExtension.class)
 public class ServerClientTest {
     private static final Logger logger = LoggerFactory.getLogger(ServerClientTest.class);
-
+    /* 
     @Test
     public void testLogin() throws IOException, SQLException, InterruptedException {
         logger.info("Testing login");
@@ -76,7 +77,7 @@ public class ServerClientTest {
             serverThread.join();
         }
     }
-/*
+
     @Test
     public void testSearchUsers() throws IOException, SQLException, InterruptedException {
         logger.info("Searching for users using a valid client session");

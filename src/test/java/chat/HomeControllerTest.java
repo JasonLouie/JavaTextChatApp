@@ -8,6 +8,7 @@ import com.chat.controller.HomeController;
 
 import java.io.IOException;
 
+@SuppressWarnings("unused")
 @ExtendWith(MockitoExtension.class)
 public class HomeControllerTest {
     /*

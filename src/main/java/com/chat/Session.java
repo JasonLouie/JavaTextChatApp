@@ -1,5 +1,8 @@
 package com.chat;
 
+import com.chat.models.User;
+import com.chat.models.UserProfile;
+
 public class Session {
     private User user;
     private UserProfile userProfile;

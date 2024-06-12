@@ -1,14 +1,12 @@
-package com.chat;
+package com.chat.models;
 
-public class Content {
+public class FriendRequest {
     private int senderId;
     private int receiverId;
-    private String message;
 
-    public Content(int senderId, int receiverId, String message) {
+    public FriendRequest(int senderId, int receiverId) {
         this.senderId = senderId;
         this.receiverId = receiverId;
-        this.message = message;
     }
 
     public int getSenderId() {
@@ -17,9 +15,5 @@ public class Content {
 
     public int getReceiverId() {
         return receiverId;
-    }
-
-    public String getMessage() {
-        return message;
     }
 }

@@ -10,12 +10,13 @@ import java.net.Socket;
 import java.util.List;
 
 import com.chat.Client;
-import com.chat.Conversation;
-import com.chat.UserProfile;
+import com.chat.models.Conversation;
+import com.chat.models.UserProfile;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@SuppressWarnings("unused")
 @ExtendWith(MockitoExtension.class)
 public class ClientTest {
     /*

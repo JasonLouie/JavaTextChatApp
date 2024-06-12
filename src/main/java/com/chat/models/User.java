@@ -1,4 +1,4 @@
-package com.chat;
+package com.chat.models;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

@@ -4,9 +4,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.chat.Conversation;
 import com.chat.Database;
-import com.chat.UserProfile;
+import com.chat.models.Conversation;
+import com.chat.models.UserProfile;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -16,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@SuppressWarnings("unused")
 @ExtendWith(MockitoExtension.class)
 public class DatabaseTest {
 

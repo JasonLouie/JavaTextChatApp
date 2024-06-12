@@ -8,6 +8,22 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.chat.messages.ConversationMessage;
+import com.chat.messages.ConversationsMessage;
+import com.chat.messages.ErrorMessage;
+import com.chat.messages.FriendRequestMessage;
+import com.chat.messages.FriendSuccessMessage;
+import com.chat.messages.FriendsListMessage;
+import com.chat.messages.LoginMessage;
+import com.chat.messages.LoginRegisterSuccessMessage;
+import com.chat.messages.LogoutMessage;
+import com.chat.messages.Message;
+import com.chat.messages.NoResultsMessage;
+import com.chat.messages.RegisterMessage;
+import com.chat.messages.RequestMessage;
+import com.chat.messages.SearchUsersMessage;
+import com.chat.models.*;
+
 public class Server {
     private ServerSocket serverSocket;
     private Database database;
@@ -71,14 +87,14 @@ public class Server {
         for (ClientThread client : clients) {
             client.close();
         }
+        clients.clear();
     }
 
     private class ClientThread extends Thread {
         private Socket socket;
         private Database database;
-        private User user;
-        private ObjectInputStream input;
-        private ObjectOutputStream output;
+        private DataInputStream input;
+        private DataOutputStream output;
         private boolean connected = true;
 
         public ClientThread(Socket socket, Database database) {
@@ -86,101 +102,18 @@ public class Server {
             this.database = database;
         }
 
-        private synchronized void sendUTF(String message) throws IOException {
-            logger.info("Sending UTF message: " + message);
-            output.writeUTF(message);
-            output.flush();
-        }
-
-        private synchronized String receiveUTF() throws IOException {
-            return input.readUTF();
-        }
-
-        private synchronized void sendLong(long value) throws IOException {
-            logger.info("Sending long value: " + value);
-            output.writeLong(value);
-            output.flush();
-        }
-
-        private synchronized long receiveLong() throws IOException {
-            return input.readLong();
-        }
-
-        private synchronized void sendInt(int value) throws IOException {
-            logger.info("Sending int value: " + value);
-            output.writeInt(value);
-            output.flush();
-        }
-
-        private synchronized int receiveInt() throws IOException {
-            return input.readInt();
-        }
-
-        public void run() {
+        public synchronized void run() {
             try {
-                input = new ObjectInputStream(socket.getInputStream());
-                output = new ObjectOutputStream(socket.getOutputStream());
+                output = new DataOutputStream(socket.getOutputStream());
+                input = new DataInputStream(socket.getInputStream());
                 output.flush();
                 while (running && connected) {
-                    String command = receiveUTF();
-                    switch (command) {
-                        case "login":
-                            try {
-                                logger.info("Login attempted");
-                                login();
-                            } catch (IOException | SQLException e) {
-                                logger.error("Login error: " + e);
-                            }
-                            break;
-                        case "register":
-                            try {
-                                logger.info("Registration attempted");
-                                register();
-                            } catch (IOException | SQLException e) {
-                                logger.error("Registration error: " + e);
-                            }
-                            break;
-                        case "get_friends":
-                            getFriends();
-                            break;
-                        case "logout":
-                            try {
-                                logger.info("Initiated logout");
-                                logout();
-                            } catch (IOException | SQLException e) {
-                                logger.error("Logout error: " + e);
-                            }
-                            break;
-                        case "search_users":
-                            try {
-                                logger.info("Searching for users...");
-                                searchUsers();
-                            } catch (IOException | SQLException e) {
-                                logger.error("Searching error: " + e);
-                            }
-                            break;
-                        case "get_conversations":
-                            try {
-                                logger.info("Getting conversations for user...");
-                                getConversations();
-                            } catch (IOException | SQLException e) {
-                                logger.error("Getting conversations error: " + e);
-                            }
-                            break;
-                        case "get_conversation":
-                            try {
-                                logger.info("Getting a particular conversation...");
-                                getConversation();
-                            } catch (IOException | SQLException e) {
-                                logger.error("Error getting conversation: " + e);
-                            }
-                            break;
-                    }
+                    Message message = Message.readFrom(input);
+                    logger.info("Received message from client");
+                    handleRequest(message);
                 }
             } catch (IOException | SQLException e) {
                 logger.error("Error handling client connection: " + e.getMessage());
-            } finally {
-                close();
             }
         }
 
@@ -192,151 +125,192 @@ public class Server {
                 output.close();
             } catch (IOException e) {
                 logger.error("Error closing client connection: " + e.getMessage());
+            } finally {
+                socket = null;
+                input = null;
+                output = null;
             }
         }
 
-        private void login() throws IOException, SQLException {
-            String username = receiveUTF();
-            String password = receiveUTF();
+        private synchronized void handleRequest(Message message) throws IOException, SQLException {
+            switch (message.getType()) {
+                case Message.TYPE_LOGIN:
+                    handleLogin((LoginMessage) message);
+                    break;
+                case Message.TYPE_REGISTER:
+                    handleRegister((RegisterMessage) message);
+                    break;
+                case Message.TYPE_REQUEST:
+                    handleRequestMessage((RequestMessage) message);
+                    break;
+                default:
+                    logger.error("Unknown message type: " + message.getType());
+                    break;
+            }
+        }
+
+        private synchronized void handleLogin(LoginMessage message) throws IOException, SQLException {
+            String username = message.getUsername();
+            String password = message.getPassword();
             if (database.verifyUserPassword(username, password)) {
                 logger.info("Login success");
-                sendUTF("success");
-                sendUserProfile(database.getUserProfile(username));
+                new LoginRegisterSuccessMessage(database.getUserProfile(username)).writeTo(output);
+                logger.info("Sent user profile");
             } else {
                 logger.info("Failed login");
-                sendUTF("Incorrect username or password");
+                new ErrorMessage("Incorrect username or password").writeTo(output);
             }
         }
 
-        private void register() throws IOException, SQLException {
-            String username = receiveUTF();
-            String nickname = receiveUTF();
-            String email = receiveUTF();
-            String password = receiveUTF();
-            String fileName = receiveUTF();
-            long fileSize = receiveLong();
-            File profilePictureDir = new File("profile_pictures");
-            if (!profilePictureDir.exists()) {
-                profilePictureDir.mkdirs(); // Create directory if it doesn't exist
-            }
-            File profilePicture = new File(profilePictureDir, fileName);
-            try (FileOutputStream fileOutputStream = new FileOutputStream(profilePicture)) {
-                byte[] buffer = new byte[4096];
-                int bytesRead;
-                while (fileSize > 0 && (bytesRead = input.read(buffer, 0, (int) Math.min(buffer.length, fileSize))) != -1) {
-                    fileOutputStream.write(buffer, 0, bytesRead);
-                    fileSize -= bytesRead;
-                }
-            }
+        private synchronized void handleLogout(RequestMessage message) throws IOException, SQLException {
+            int userId = message.getIntParam();
+            logger.info("Logging out user {}...", userId );
+            database.logout(userId);
+            logger.info("Log out successful");
+            new LogoutMessage(true).writeTo(output);
+        }
+
+        private synchronized void handleRegister(RegisterMessage message) throws IOException, SQLException {
+            logger.info("Receiving registration info...");
+            String username = message.getUsername();
+            String nickname = message.getNickname();
+            String email = message.getEmail();
+            String password = message.getPassword();
+            File profilePicture = message.getProfilePicture();
+            logger.info("Received registration info");
             if (database.checkUserExists(username, email)) {
-                sendUTF("user_already_exists");
+                logger.error("User already exists");
+                new ErrorMessage("User already exists").writeTo(output);
             } else {
+                logger.info("Registering user...");
                 database.registerUser(username, nickname, email, password, profilePicture.getAbsolutePath());
-                sendUTF("success");
-                sendUserProfile(database.getUserProfile(username));
+                logger.info("Registered user");
+                new LoginRegisterSuccessMessage(database.getUserProfile(username)).writeTo(output);
             }
         }
 
-        private void logout() throws IOException, SQLException {
-            database.logout(user.getId());
-            sendUTF("success");
-            logger.info("User id " + user.getId() + " logged out successfully");
+        private synchronized void handleRequestMessage(RequestMessage message) throws IOException, SQLException {
+            switch (message.getRequestType()) {
+                case RequestMessage.REQUEST_GET_CONVERSATIONS:
+                    handleGetConversations(message.getIntParam());
+                    break;
+                case RequestMessage.REQUEST_GET_CONVERSATION:
+                    handleGetConversation(message.getIntParam(), message.getSecondIntParam());
+                    break;
+                case RequestMessage.REQUEST_GET_FRIENDS:
+                    handleGetFriends(message.getIntParam());
+                    break;
+                case RequestMessage.REQUEST_SEARCH_USERS:
+                    handleSearchUsers(message);
+                    break;
+                case RequestMessage.REQUEST_LOGOUT:
+                    handleLogout(message);
+                    break;
+                case RequestMessage.REQUEST_GET_FRIEND_REQUESTS:
+                    handleGetFriendRequests(message);
+                    break;
+                case RequestMessage.REQUEST_SEND_FRIEND_REQUEST:
+                    handleSendFriendRequest(message);
+                    break;
+                case RequestMessage.REQUEST_ACCEPT_FRIEND_REQUEST:
+                    handleAcceptFriendRequest(message);
+                    break;
+                case RequestMessage.REQUEST_DENY_FRIEND_REQUEST:
+                    handleDenyFriendRequest(message);
+                    break;
+                default:
+                    logger.error("Unknown request type: {}", message.getRequestType());
+                    break;
+            }
         }
 
-        private void searchUsers() throws IOException, SQLException {
-            try {
-                String query = receiveUTF();
-                List<UserProfile> results = database.searchUsers(query);
-                logger.info("Found " + results.size() + " users matching the query: " + query);
-                if (results.isEmpty()) {
-                    sendUTF("no_results");
-                    logger.info("No users exist with a username or nickname like " + query);
-                } else {
-                    logger.info("Sent the list of users with a username or nickname ");
-                    sendUserProfiles(results);
+        private synchronized void handleGetConversations(int userId) throws IOException, SQLException {
+            if (database.checkUserExists(userId)) {
+                List<Conversation> conversations = database.getConversations(userId);
+                if (conversations.isEmpty()){
+                    new NoResultsMessage("User does not have any conversations");
                 }
-            } catch (SQLException e) {
-                logger.error("Error searching users", e);
-                sendUTF("error");
-                sendUTF("Error searching users: " + e.getMessage());
+                new ConversationsMessage(conversations).writeTo(output);
+            } else {
+                new ErrorMessage("User does not exist").writeTo(output);
             }
         }
 
-        private void getFriends() throws IOException, SQLException {
-            try {
-                int userId = receiveInt();
-                List<UserProfile> friends = database.getFriends(userId);
-                logger.info("Sent the list of friends to user");
-                sendUserProfiles(friends);
-            } catch (SQLException e) {
-                logger.error("Error getting friends", e);
-                sendUTF("error");
-                sendUTF("Error getting friends: " + e.getMessage());
+        private synchronized void handleGetConversation(int senderId, int receiverId) throws IOException, SQLException {
+            if (database.checkConversationExists(senderId, receiverId)) {
+                List<Content> conversation = database.getConversation(receiverId);
+                new ConversationMessage(conversation).writeTo(output);
+            } else {
+                new NoResultsMessage("User " + senderId + " does not have any conversation with " + receiverId).writeTo(output);
             }
         }
 
-        private void getConversation() throws IOException, SQLException {
-            int userId = receiveInt();
-            List<Content> conversations = database.getConversation(userId);
-            output.writeInt(conversations.size());
-            for (Content message : conversations) {
-                sendInt(message.getSenderId());
-                sendInt(message.getReceiverId());
-                sendUTF(message.getMessage());
+        private synchronized void handleGetFriends(int userId) throws IOException, SQLException {
+            List<UserProfile> friends = database.getFriends(userId);
+            if (friends.size() != 0){
+                logger.info("Successfully retrieved friends list");
+                new FriendsListMessage(friends).writeTo(output);
+            } else {
+                logger.info("No friends found for user {}", userId);
+                new NoResultsMessage("No friends found").writeTo(output);
             }
-            output.flush();
         }
 
-        private void getConversations() throws IOException, SQLException {
-            int userId = receiveInt();
-            List<Conversation> conversations = database.getConversations(userId);
-            output.writeInt(conversations.size());
-            for (Conversation conversation : conversations) {
-                sendUTF(conversation.getUsername());
-                sendFile(conversation.getProfilePicture());
-                sendUTF(conversation.getLastMessage());
+        private synchronized void handleSearchUsers(RequestMessage message) throws IOException, SQLException {
+            String query = message.getStringParam();
+            List<UserProfile> results = database.searchUsers(query);
+            if (results.size() != 0){
+                logger.info("Found " + results.size() + " users with the username or nickname " + query);
+                new SearchUsersMessage(results).writeTo(output);
+            } else {
+                logger.info("No user with username or nickname {} found", query);
+                new NoResultsMessage("No user with username or nickname " + query).writeTo(output);
             }
-            output.flush();
         }
 
-        private void sendUserProfile(UserProfile profile) throws IOException {
-            logger.info("Sending user profile...");
-            sendUTF(profile.getUsername());
-            sendUTF(profile.getNickname());
-            sendFile(profile.getProfilePicture());
-            sendUTF(profile.getBio());
-            sendUTF(profile.getStatus());
-            logger.info("User profile sent");
+        private synchronized void handleGetFriendRequests(RequestMessage message) throws IOException, SQLException {
+            int userId = message.getIntParam();
+            List<UserProfile> friendRequests = database.getFriendRequests(userId);
+            if (friendRequests.size() != 0){
+                logger.info("Successfully retrieved friend requests");
+                new FriendRequestMessage(friendRequests);
+            } else{
+                logger.info("No friend requests found for user {}", userId);
+                new NoResultsMessage("No friend requests found").writeTo(output);
+            }
         }
 
-        private void sendUserProfiles(List<UserProfile> profiles) throws IOException {
-            output.writeInt(profiles.size());
-            for (UserProfile profile : profiles) {
-                sendUTF(profile.getUsername());
-                sendUTF(profile.getNickname());
-                sendFile(profile.getProfilePicture());
-                sendUTF(profile.getBio());
-                sendUTF(profile.getStatus());
+        private synchronized void handleAcceptFriendRequest(RequestMessage message) throws IOException, SQLException {
+            int senderId = message.getIntParam();
+            int receiverId = message.getSecondIntParam();
+            if (database.checkFriendRequestExists(receiverId, senderId)) {
+                database.acceptFriendRequest(receiverId, senderId);
+                new FriendSuccessMessage(true).writeTo(output);
+            } else {
+                new FriendSuccessMessage(false).writeTo(output);
             }
-            output.flush();
         }
 
-        private void sendFile(File file) throws IOException {
-            if (!file.exists() || !file.isFile()) {
-                throw new FileNotFoundException("File not found: " + file.getAbsolutePath());
+        private synchronized void handleDenyFriendRequest(RequestMessage message) throws IOException, SQLException {
+            int senderId = message.getIntParam();
+            int receiverId = message.getSecondIntParam();
+            if (database.checkFriendRequestExists(receiverId, senderId)) {
+                database.denyFriendRequest(receiverId, senderId);
+                new FriendSuccessMessage(true).writeTo(output);
+            } else {
+                new FriendSuccessMessage(false).writeTo(output);
             }
-            logger.info("Sending file: " + file.getAbsolutePath());
-            sendUTF(file.getName());
-            sendLong(file.length());
-            try (FileInputStream fileInputStream = new FileInputStream(file)) {
-                byte[] buffer = new byte[4096];
-                int bytesRead;
-                while ((bytesRead = fileInputStream.read(buffer)) != -1) {
-                    output.write(buffer, 0, bytesRead);
-                }
+        }
+
+        private synchronized void handleSendFriendRequest(RequestMessage message) throws IOException, SQLException {
+            int senderId = message.getIntParam();
+            int receiverId = message.getSecondIntParam();
+            if (database.checkFriendRequestExists(receiverId, senderId)) {
+                new FriendSuccessMessage(false).writeTo(output);
+            } else {
+                database.sendFriendRequest(senderId, receiverId);
+                new FriendSuccessMessage(true).writeTo(output);
             }
-            output.flush();
-            logger.info("File sent: " + file.getAbsolutePath());
-        }        
+        }
     }
 }

@@ -11,7 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.chat.Client;
-import com.chat.UserProfile;
+import com.chat.models.UserProfile;
 
 public class FriendsController {
     private Client client;

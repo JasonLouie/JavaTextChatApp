@@ -1,5 +1,6 @@
 chat\ServerClientTest.class
 chat\ClientTest.class
 chat\HomeControllerTest.class
+chat\ClientServerTest.class
 chat\ServerTest.class
 chat\DatabaseTest.class

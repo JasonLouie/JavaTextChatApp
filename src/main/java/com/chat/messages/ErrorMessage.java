@@ -1,6 +1,9 @@
-package com.chat.models;
+package com.chat.messages;
 
 import java.io.*;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ErrorMessage extends Message {
     private String error;
@@ -11,14 +14,21 @@ public class ErrorMessage extends Message {
     }
 
     @Override
-    public void writeTo(DataOutputStream out) throws IOException {
+    public synchronized void writeTo(DataOutputStream out) throws IOException {
         out.writeByte(type);
         out.writeInt(error.length() + 4); // 4 is the size of the UTF header
         out.writeUTF(error);
     }
 
-    public static ErrorMessage readFrom(DataInputStream in, int length) throws IOException {
+    public static synchronized ErrorMessage readFrom(DataInputStream in) throws IOException {
+        Logger logger = LoggerFactory.getLogger(ErrorMessage.class);
+
+        int length = in.readInt();
+        logger.info("Length: {}", length);
+
         String error = in.readUTF();
+        logger.info("Error: {}", error);
+
         return new ErrorMessage(error);
     }
 
