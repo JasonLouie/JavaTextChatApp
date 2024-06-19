@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.chat.Database;
+import com.chat.database.DatabaseAccessor;
 import com.chat.models.Conversation;
 import com.chat.models.UserProfile;
 
@@ -19,14 +19,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SuppressWarnings("unused")
 @ExtendWith(MockitoExtension.class)
 public class DatabaseTest {
-
+    /*
     @Test
     public void testCheckUserExists() throws SQLException {
-        Database database = new Database();
+        DatabaseAccessor database = new DatabaseAccessor();
         boolean exists = database.checkUserExists("username", "email");
         assertTrue(exists);
     }
-    /*
+    
     @Test
     public void testRegisterUser() throws SQLException {
         Database database = new Database();

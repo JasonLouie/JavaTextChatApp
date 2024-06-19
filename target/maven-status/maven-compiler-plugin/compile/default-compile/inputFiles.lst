@@ -6,6 +6,7 @@ C:\Users\jjlui\Desktop\dataannotation\6-01\demo\src\main\java\com\chat\models\Co
 C:\Users\jjlui\Desktop\dataannotation\6-01\demo\src\main\java\com\chat\controller\FriendsController.java
 C:\Users\jjlui\Desktop\dataannotation\6-01\demo\src\main\java\com\chat\messages\Message.java
 C:\Users\jjlui\Desktop\dataannotation\6-01\demo\src\main\java\com\chat\messages\NoResultsMessage.java
+C:\Users\jjlui\Desktop\dataannotation\6-01\demo\src\main\java\com\chat\models\Friendship.java
 C:\Users\jjlui\Desktop\dataannotation\6-01\demo\src\main\java\com\chat\messages\RequestMessage.java
 C:\Users\jjlui\Desktop\dataannotation\6-01\demo\src\main\java\com\chat\messages\LogoutMessage.java
 C:\Users\jjlui\Desktop\dataannotation\6-01\demo\src\main\java\com\chat\controller\UserProfileController.java
@@ -14,7 +15,9 @@ C:\Users\jjlui\Desktop\dataannotation\6-01\demo\src\main\java\com\chat\Client.ja
 C:\Users\jjlui\Desktop\dataannotation\6-01\demo\src\main\java\com\chat\Database.java
 C:\Users\jjlui\Desktop\dataannotation\6-01\demo\src\main\java\com\chat\messages\LoginRegisterSuccessMessage.java
 C:\Users\jjlui\Desktop\dataannotation\6-01\demo\src\main\java\com\chat\messages\FriendsListMessage.java
+C:\Users\jjlui\Desktop\dataannotation\6-01\demo\src\main\java\com\chat\models\FriendRequest.java
 C:\Users\jjlui\Desktop\dataannotation\6-01\demo\src\main\java\com\chat\controller\RegisterController.java
+C:\Users\jjlui\Desktop\dataannotation\6-01\demo\src\main\java\com\chat\messages\FriendRequestMessage.java
 C:\Users\jjlui\Desktop\dataannotation\6-01\demo\src\main\java\com\chat\Server.java
 C:\Users\jjlui\Desktop\dataannotation\6-01\demo\src\main\java\com\chat\messages\FriendSuccessMessage.java
 C:\Users\jjlui\Desktop\dataannotation\6-01\demo\src\main\java\com\chat\messages\SearchUsersMessage.java

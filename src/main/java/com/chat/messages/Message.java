@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import com.chat.models.FriendRequest;
 import com.chat.models.Friendship;
+import com.chat.models.User;
 import com.chat.models.UserProfile;
 
 public abstract class Message {
@@ -32,11 +33,11 @@ public abstract class Message {
 
     public byte getType() {
         return type;
-    } 
+    }
 
     public abstract void writeTo(DataOutputStream out) throws IOException;
 
-    public static synchronized Message readFrom(DataInputStream in) throws IOException {
+    public static Message readFrom(DataInputStream in) throws IOException {
         Logger logger = LoggerFactory.getLogger(Message.class);
         byte type = in.readByte();
         logger.info("Got type: {}", type);
@@ -61,31 +62,35 @@ public abstract class Message {
                 return LogoutMessage.readFrom(in);
             case TYPE_FRIEND_REQUESTS_LIST:
                 return FriendRequestMessage.readFrom(in);
+            case TYPE_FRIEND_SUCCESS:
+                return FriendSuccessMessage.readFrom(in);
             default:
                 throw new IOException("Unknown message type: " + type);
         }
     }
 
-    protected static synchronized void writeFile(DataOutputStream out, File file) throws IOException {
-        if (file != null && file.exists()) {
-            out.writeUTF(file.getName());
-            out.writeLong(file.length());
-            out.flush();
-            try (FileInputStream fileInputStream = new FileInputStream(file)) {
-                byte[] buffer = new byte[4096];
-                int bytesRead;
-                while ((bytesRead = fileInputStream.read(buffer)) != -1) {
-                    out.write(buffer, 0, bytesRead);
+    protected static void writeFile(DataOutputStream out, File file) throws IOException {
+        synchronized (out) {
+            if (file != null && file.exists()) {
+                out.writeUTF(file.getName());
+                out.writeLong(file.length());
+                out.flush();
+                try (FileInputStream fileInputStream = new FileInputStream(file)) {
+                    byte[] buffer = new byte[4096];
+                    int bytesRead;
+                    while ((bytesRead = fileInputStream.read(buffer)) != -1) {
+                        out.write(buffer, 0, bytesRead);
+                    }
                 }
+                out.flush();
+            } else {
+                out.writeUTF("");
+                out.writeLong(0);
             }
-            out.flush();
-        } else {
-            out.writeUTF("");
-            out.writeLong(0);
         }
     }
 
-    protected static synchronized File readFile(DataInputStream in, String directoryName) throws IOException {
+    protected static File readFile(DataInputStream in, String directoryName) throws IOException {
         String fileName = in.readUTF();
         long fileSize = in.readLong();
         if (fileName.isEmpty() || fileSize == 0) {
@@ -104,113 +109,169 @@ public abstract class Message {
         return file;
     }
 
-    protected synchronized <T extends Message> void writeProfile(DataOutputStream out, Class<T> clazz, UserProfile profile) throws IOException {
+    protected <T extends Message> void writeProfile(DataOutputStream out, Class<T> clazz, UserProfile profile) throws IOException {
         Logger logger = LoggerFactory.getLogger(clazz);
         logger.info("Starting serialization of UserProfile...");
 
-        // Calculate total length dynamically based on actual string lengths
-        int totalLength = 4 + profile.getUsername().length() + 2 +
-                        profile.getNickname().length() + 2 +
-                        (profile.getBio() != null ? profile.getBio().length() : 0) + 2 +
-                        (profile.getStatus() != null ? profile.getStatus().length() : 0) + 2;
-        
-        out.writeInt(totalLength);
-        out.writeInt(profile.getUserId());
-        out.writeUTF(profile.getUsername());
-        out.writeUTF(profile.getNickname() != null ? profile.getNickname() : profile.getUsername());
-        out.writeUTF(profile.getBio() != null ? profile.getBio() : "");
-        out.writeUTF(profile.getStatus() != null ? profile.getStatus() : "");
-        writeFile(out, profile.getProfilePicture());
-        out.flush();
+        synchronized (out) {
+            int totalLength = 4 + profile.getUsername().length() + 2 +
+                    profile.getNickname().length() + 2 +
+                    (profile.getBio() != null ? profile.getBio().length() : 0) + 2 +
+                    (profile.getStatus() != null ? profile.getStatus().length() : 0) + 2;
+
+            out.writeInt(totalLength);
+            out.writeInt(profile.getUserId());
+            out.writeUTF(profile.getUsername());
+            out.writeUTF(profile.getNickname() != null ? profile.getNickname() : profile.getUsername());
+            out.writeUTF(profile.getBio() != null ? profile.getBio() : "");
+            out.writeUTF(profile.getStatus() != null ? profile.getStatus() : "");
+            writeFile(out, profile.getProfilePicture());
+            out.flush();
+        }
+
         logger.info("Serialization of UserProfile completed.");
     }
 
-    protected static synchronized <T extends Message> UserProfile readProfile(DataInputStream in, Class<T> clazz) throws IOException {
+    protected static <T extends Message> UserProfile readProfile(DataInputStream in, Class<T> clazz) throws IOException {
         Logger logger = LoggerFactory.getLogger(clazz);
         logger.info("Starting deserialization of UserProfile...");
 
-        int length = in.readInt();
-        logger.info("Length: {}", length);
+        synchronized (in) {
+            int length = in.readInt();
+            logger.info("Length: {}", length);
 
-        // Read each field with logging
-        int userId = in.readInt();
-        logger.info("UserId: {}", userId);
+            int userId = in.readInt();
+            logger.info("UserId: {}", userId);
 
-        String username = in.readUTF();
-        logger.info("Username: {}", username);
+            String username = in.readUTF();
+            logger.info("Username: {}", username);
 
-        String nickname = in.readUTF();
-        logger.info("Nickname: {}", nickname);
+            String nickname = in.readUTF();
+            logger.info("Nickname: {}", nickname);
 
-        String bio = in.readUTF();
-        logger.info("Bio: {}", bio);
+            String bio = in.readUTF();
+            logger.info("Bio: {}", bio);
 
-        String status = in.readUTF();
-        logger.info("Status: {}", status);
+            String status = in.readUTF();
+            logger.info("Status: {}", status);
 
-        File profilePicture = readFile(in, "received_pfps");
-        logger.info("Profile picture: {}", profilePicture != null ? profilePicture.getName() : "No profile picture");
+            File profilePicture = readFile(in, "received_pfps");
+            logger.info("Profile picture: {}", profilePicture != null ? profilePicture.getName() : "No profile picture");
 
-        logger.info("Deserialization of UserProfile completed.");
+            logger.info("Deserialization of UserProfile completed.");
 
-        return new UserProfile(userId, username, nickname, bio, status, profilePicture);
+            return new UserProfile(userId, username, nickname, bio, status, profilePicture);
+        }
     }
 
-    protected synchronized <T extends Message> void writeFriendship(DataOutputStream out, Class<T> clazz, Friendship friendship) throws IOException {
+    protected <T extends Message> void writeFriendship(DataOutputStream out, Class<T> clazz, Friendship friendship) throws IOException {
         Logger logger = LoggerFactory.getLogger(clazz);
         logger.info("Starting serialization of Friendship...");
 
-        out.writeInt(8); // Total length of 2 integers
-        out.writeInt(friendship.getUserId());
-        out.writeInt(friendship.getFriendId());
-        out.flush();
+        synchronized (out) {
+            out.writeInt(8);
+            out.writeInt(friendship.getUserId());
+            out.writeInt(friendship.getFriendId());
+            out.flush();
+        }
+
         logger.info("Serialization of Friendship completed.");
     }
 
-    protected static synchronized <T extends Message> Friendship readFriendship(DataInputStream in, Class<T> clazz) throws IOException {
+    protected static <T extends Message> Friendship readFriendship(DataInputStream in, Class<T> clazz) throws IOException {
         Logger logger = LoggerFactory.getLogger(clazz);
         logger.info("Starting deserialization of Friendship...");
 
-        int length = in.readInt();
-        logger.info("Length: {}", length);
+        synchronized (in) {
+            int length = in.readInt();
+            logger.info("Length: {}", length);
 
-        int userId = in.readInt();
-        logger.info("UserId: {}", userId);
+            int userId = in.readInt();
+            logger.info("UserId: {}", userId);
 
-        int friendId = in.readInt();
-        logger.info("FriendId: {}", friendId);
+            int friendId = in.readInt();
+            logger.info("FriendId: {}", friendId);
 
-        logger.info("Deserialization of Friendship completed.");
+            logger.info("Deserialization of Friendship completed.");
 
-        return new Friendship(userId, friendId);
+            return new Friendship(userId, friendId);
+        }
     }
 
-    protected synchronized <T extends Message> void writeFriendRequest(DataOutputStream out, Class<T> clazz, FriendRequest friendRequest) throws IOException {
+    protected <T extends Message> void writeFriendRequest(DataOutputStream out, Class<T> clazz, FriendRequest friendRequest) throws IOException {
         Logger logger = LoggerFactory.getLogger(clazz);
         logger.info("Starting serialization of FriendRequest...");
 
-        out.writeInt(8); // Total length of 2 integers
-        out.writeInt(friendRequest.getSenderId());
-        out.writeInt(friendRequest.getReceiverId());
-        out.flush();
+        synchronized (out) {
+            out.writeInt(8);
+            out.writeInt(friendRequest.getSenderId());
+            out.writeInt(friendRequest.getReceiverId());
+            out.flush();
+        }
+
         logger.info("Serialization of FriendRequest completed.");
     }
 
-    protected static synchronized <T extends Message> FriendRequest readFriendRequest(DataInputStream in, Class<T> clazz) throws IOException {
+    protected static <T extends Message> FriendRequest readFriendRequest(DataInputStream in, Class<T> clazz) throws IOException {
         Logger logger = LoggerFactory.getLogger(clazz);
         logger.info("Starting deserialization of FriendRequest...");
 
-        int length = in.readInt();
-        logger.info("Length: {}", length);
+        synchronized (in) {
+            int length = in.readInt();
+            logger.info("Length: {}", length);
 
-        int senderId = in.readInt();
-        logger.info("SenderId: {}", senderId);
+            int senderId = in.readInt();
+            logger.info("SenderId: {}", senderId);
 
-        int receiverId = in.readInt();
-        logger.info("ReceiverId: {}", receiverId);
+            int receiverId = in.readInt();
+            logger.info("ReceiverId: {}", receiverId);
 
-        logger.info("Deserialization of FriendRequest completed.");
+            logger.info("Deserialization of FriendRequest completed.");
 
-        return new FriendRequest(senderId, receiverId);
+            return new FriendRequest(senderId, receiverId);
+        }
+    }
+
+    protected <T extends Message> void writeUser(DataOutputStream out, Class<T> clazz, User user) throws IOException {
+        Logger logger = LoggerFactory.getLogger(clazz);
+        logger.info("Starting serialization of User...");
+
+        synchronized(out) {
+            int totalLength = 4 + user.getUsername().length() + 2 +
+            user.getNickname().length() + 2 + user.getEmail().length() + 2;
+            out.writeInt(totalLength);
+            out.writeInt(user.getId());
+            out.writeUTF(user.getUsername());
+            out.writeUTF(user.getNickname());
+            out.writeUTF(user.getEmail());
+            out.flush();
+        }
+        logger.info("Serialization of User completed");
+    }
+
+    protected static <T extends Message> User readUser(DataInputStream in, Class<T> clazz) throws IOException {
+        Logger logger = LoggerFactory.getLogger(clazz);
+        logger.info("Starting deserialization of FriendRequest...");
+
+        synchronized (in) {
+            int length = in.readInt();
+            logger.info("Length: {}", length);
+
+            int userId = in.readInt();
+            logger.info("UserId: {}", userId);
+
+            String username = in.readUTF();
+            logger.info("Username: {}", username);
+
+            String nickname = in.readUTF();
+            logger.info("Nickname: {}", nickname);
+
+            String email = in.readUTF();
+            logger.info("Email: {}", email);
+
+            logger.info("Deserialization of User completed.");
+
+            return new User(userId, username, nickname, email);
+        }
     }
 }

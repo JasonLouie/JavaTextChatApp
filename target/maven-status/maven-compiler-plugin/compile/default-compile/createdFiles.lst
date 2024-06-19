@@ -1,3 +1,4 @@
+com\chat\messages\FriendRequestMessage.class
 com\chat\controller\RegisterController.class
 com\chat\Database.class
 com\chat\messages\FriendsListMessage.class
@@ -5,7 +6,9 @@ com\chat\messages\RegisterMessage.class
 com\chat\controller\UserProfileController.class
 com\chat\messages\ConversationsMessage.class
 com\chat\messages\SearchUsersMessage.class
+com\chat\models\Friendship.class
 com\chat\PasswordHasher.class
+com\chat\models\FriendRequest.class
 com\chat\messages\LoginRegisterSuccessMessage.class
 com\chat\messages\FriendSuccessMessage.class
 com\chat\Client.class

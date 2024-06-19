@@ -4,10 +4,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.chat.Client;
-import com.chat.Server;
+import com.chat.client.Client;
 import com.chat.models.Conversation;
 import com.chat.models.UserProfile;
+import com.chat.server.Server;
 
 import java.io.File;
 import java.io.IOException;

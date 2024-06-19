@@ -1,6 +1,6 @@
 package com.chat.controller;
 
-import com.chat.Client;
+import com.chat.client.Client;
 import com.chat.models.UserProfile;
 
 import java.io.*;
@@ -11,7 +11,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.stage.Stage;
 
 public class UserProfileController {
     private Client client;
@@ -68,9 +67,7 @@ public class UserProfileController {
     }
 
     private void handleBackButton() {
-        // Close the current stage and go back to the search users tab
-        Stage stage = (Stage) backButton.getScene().getWindow();
-        stage.close();
+        client.showHomeScreen();
     }
 
     private void handleFriendButton() {
@@ -89,7 +86,7 @@ public class UserProfileController {
             try {
                 client.sendFriendRequest(userProfile.getUserId());
                 Platform.runLater(() -> friendButton.setText("Cancel Friend Request"));
-            } catch (IOException e) {
+            } catch (Exception e) {
                 System.out.println("Error sending friend request: " + e.getMessage());
             }
         }).start();
@@ -100,7 +97,7 @@ public class UserProfileController {
             try {
                 client.removeFriend(userProfile.getUserId());
                 Platform.runLater(() -> friendButton.setText("Add Friend"));
-            } catch (IOException e) {
+            } catch (Exception e) {
                 System.out.println("Error removing friend: " + e.getMessage());
             }
         }).start();
@@ -111,7 +108,7 @@ public class UserProfileController {
             try {
                 client.cancelFriendRequest(userProfile.getUserId());
                 Platform.runLater(() -> friendButton.setText("Add Friend"));
-            } catch (IOException e) {
+            } catch (Exception e) {
                 System.out.println("Error canceling friend request: " + e.getMessage());
             }
         }).start();

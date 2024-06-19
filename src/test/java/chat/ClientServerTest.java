@@ -4,8 +4,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import com.chat.Client;
-import com.chat.Server;
+import com.chat.client.Client;
+import com.chat.server.Server;
 
 import java.io.File;
 import java.io.IOException;

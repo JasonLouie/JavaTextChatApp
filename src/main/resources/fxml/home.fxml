@@ -7,17 +7,29 @@
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.RowConstraints?>
 
-<VBox alignment="CENTER" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/11.0.2" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.chat.controller.HomeController">
-    <children>
-        <TabPane fx:id="tabPane" prefHeight="400.0" prefWidth="600.0">
+<BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="600.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/11.0.2" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.chat.controller.HomeController" stylesheets="@/css/styles.css">
+    <top>
+        <HBox alignment="CENTER" prefHeight="50.0" prefWidth="800.0" style="-fx-background-color: #3498db;">
+            <children>
+                <Label text="Chat App" textFill="WHITE" />
+            </children>
+        </HBox>
+    </top>
+    <center>
+        <TabPane fx:id="tabPane" prefHeight="550.0" prefWidth="800.0">
             <tabs>
-                <Tab fx:id="homeTab" text="Home" closable = "false">
+                <Tab fx:id="homeTab" text="Home" closable="false">
                     <content>
                         <VBox alignment="CENTER">
                             <children>
-                                <ImageView fx:id="profilePictureView" fitHeight="100.0" fitWidth="100.0" />
-                                <Label fx:id="usernameLabel" />
+                                <ImageView fx:id="profilePictureView" fitHeight="150.0" fitWidth="150.0" />
+                                <Label fx:id="usernameLabel" styleClass="username-label" />
                                 <Label fx:id="bioLabel" />
                                 <Label fx:id="statusLabel" />
                                 <Label fx:id="friendsCountLabel" />
@@ -26,33 +38,49 @@
                         </VBox>
                     </content>
                 </Tab>
-                <Tab fx:id="friendsTab" text="Friends" closable = "false">
+                <Tab fx:id="friendsTab" text="Friends" closable="false">
                     <content>
-                        <VBox fx:id="friendsBox" />
+                        <VBox fx:id="friendsBox" prefHeight="500.0" prefWidth="800.0" />
                     </content>
                 </Tab>
-                <Tab fx:id="messagesTab" text="Messages" closable = "false">
+                <Tab fx:id="friendRequestsTab" text="Friend Requests" closable="false">
+                    <content>
+                        <VBox fx:id="friendsBox" prefHeight="500.0" prefWidth="800.0" />
+                    </content>
+                </Tab>
+                <Tab fx:id="messagesTab" text="Messages" closable="false">
                     <content>
                         <VBox>
                             <children>
                                 <Button fx:id="startNewConversationButton" mnemonicParsing="false" onAction="#handleStartNewConversation" text="Start New Conversation" />
-                                <VBox fx:id="messagesBox" />
+                                <VBox fx:id="messagesBox" prefHeight="450.0" prefWidth="800.0" />
                             </children>
                         </VBox>
                     </content>
                 </Tab>
-                <Tab fx:id="searchTab" text="Search" closable = "false">
+                <Tab fx:id="searchTab" text="Search" closable="false">
                     <content>
                         <VBox>
                             <children>
-                                <TextField fx:id="searchField" />
-                                <Button mnemonicParsing="false" onAction="#handleSearch" text="Search" />
-                                <VBox fx:id="searchResultsBox" />
+                                <GridPane>
+                                    <columnConstraints>
+                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                    </columnConstraints>
+                                    <rowConstraints>
+                                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    </rowConstraints>
+                                    <children>
+                                        <TextField fx:id="searchField" GridPane.columnIndex="0" />
+                                        <Button mnemonicParsing="false" onAction="#handleSearch" text="Search" GridPane.columnIndex="1" />
+                                    </children>
+                                </GridPane>
+                                <VBox fx:id="searchResultsBox" prefHeight="450.0" prefWidth="800.0" />
                             </children>
                         </VBox>
                     </content>
                 </Tab>
             </tabs>
         </TabPane>
-    </children>
-</VBox>
+    </center>
+</BorderPane>

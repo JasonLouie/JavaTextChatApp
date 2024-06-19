@@ -78,7 +78,7 @@ public class RequestMessage extends Message {
 
     public static synchronized RequestMessage readFrom(DataInputStream in) throws IOException {
         byte requestType = in.readByte();
-        if (requestType == REQUEST_GET_FRIENDS || requestType == REQUEST_GET_CONVERSATIONS || requestType == REQUEST_LOGOUT || requestType == REQUEST_SEND_FRIEND_REQUEST || requestType == REQUEST_REMOVE_FRIEND) {
+        if (requestType == REQUEST_GET_FRIENDS || requestType == REQUEST_GET_CONVERSATIONS || requestType == REQUEST_LOGOUT) {
             int intParam = in.readInt();
             return new RequestMessage(requestType, intParam);
         } else if (requestType == REQUEST_SEARCH_USERS) {

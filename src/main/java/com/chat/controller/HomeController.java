@@ -2,10 +2,8 @@ package com.chat.controller;
 
 import javafx.application.Platform;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
@@ -19,7 +17,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
-import javafx.stage.Stage;
 
 import java.io.IOException;
 import java.util.List;
@@ -27,7 +24,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.chat.Client;
+import com.chat.client.Client;
 import com.chat.models.Conversation;
 import com.chat.models.UserProfile;
 
@@ -76,8 +73,43 @@ public class HomeController {
         this.client = client;
     }
 
+    public void setUsernameLabel(Label usernameLabel) {
+        this.usernameLabel = usernameLabel;
+    }
+
+    public void setBioLabel(Label bioLabel) {
+        this.bioLabel = bioLabel;
+    }
+
+    public void setStatusLabel(Label statusLabel) {
+        this.statusLabel = statusLabel;
+    }
+
+    public void setFriendsCountLabel(Label friendsCountLabel) {
+        this.friendsCountLabel = friendsCountLabel;
+    }
+
+    public void setLogoutButton(Button logoutButton) {
+        this.logoutButton = logoutButton;
+    }
+
+    public void setSearchField(TextField searchField) {
+        this.searchField = searchField;
+    }
+
+    public void setSearchResultsBox(VBox searchResultsBox) {
+        this.searchResultsBox = searchResultsBox;
+    }
+
+    public void setFriendsBox(VBox friendsBox) {
+        this.friendsBox = friendsBox;
+    }
+
     public void initialize() {
-        // Do nothing...
+        // Initialize UI components
+        friendsBox.getStyleClass().add("friends-box");
+        messagesBox.getStyleClass().add("messages-box");
+        searchResultsBox.getStyleClass().add("search-results-box");
     }
 
     public void init() {
@@ -98,7 +130,7 @@ public class HomeController {
     }
 
     public void displayCurrentUserProfile() {
-        UserProfile profile = client.getSession().getUserProfile();
+        UserProfile profile = client.getUserProfile();
         profilePictureView.setImage(new Image(profile.getProfilePicture().toURI().toString()));
         usernameLabel.setText(profile.getUsername() + " (" + profile.getNickname() + ")");
         bioLabel.setText(profile.getBio());
@@ -121,7 +153,8 @@ public class HomeController {
                     Platform.runLater(() -> client.showLoginScreen());
                 }
             } catch (IOException e) {
-                System.out.println("Error logging out: " + e.getMessage());
+                logger.error("Error logging out: " + e.getMessage());
+                Platform.runLater(() -> displayError("Error logging out: " + e.getMessage()));
             }
         }).start();
     }
@@ -133,8 +166,9 @@ public class HomeController {
                 try {
                     List<UserProfile> results = client.searchUsers(query);
                     Platform.runLater(() -> displayUserResults(results, searchResultsBox));
-                } catch (IOException e) {
-                    System.out.println("Error searching users: " + e.getMessage());
+                } catch (Exception e) {
+                    logger.error("Error searching users: " + e.getMessage());
+                    Platform.runLater(() -> displayError("Error searching users: " + e.getMessage()));
                 }
             }).start();
         }
@@ -145,8 +179,9 @@ public class HomeController {
             try {
                 List<UserProfile> friends = client.getFriends();
                 Platform.runLater(() -> displayUserResults(friends, friendsBox));
-            } catch (IOException e) {
-                System.out.println("Error getting friends: " + e.getMessage());
+            } catch (Exception e) {
+                logger.error("Error getting friends: " + e.getMessage());
+                Platform.runLater(() -> displayError("Error getting friends: " + e.getMessage()));
             }
         }).start();
     }
@@ -156,60 +191,52 @@ public class HomeController {
             try {
                 List<UserProfile> friendRequests = client.getFriendRequests();
                 Platform.runLater(() -> displayFriendRequests(friendRequests));
-            } catch (IOException e) {
-                System.out.println("Error getting friend requests: " + e.getMessage());
+            } catch (Exception e) {
+                logger.error("Error getting friend requests: " + e.getMessage());
+                Platform.runLater(() -> displayError("Error getting friend requests: " + e.getMessage()));
             }
         }).start();
     }
 
-    private void displayUserResults(List<UserProfile> results, VBox resultsBox) {
+    public void displayUserResults(List<UserProfile> results, VBox resultsBox) {
         resultsBox.getChildren().clear();
-        if (!results.isEmpty()){
+        if (results != null) {
             for (UserProfile user : results) {
-                HBox userBox = new HBox();
-                userBox.setPadding(new Insets(0, 0, 0, 10));
-                userBox.setAlignment(Pos.CENTER_LEFT);
-                ImageView profilePictureView = new ImageView(new Image(user.getProfilePicture().toURI().toString()));
-                profilePictureView.setFitHeight(50);
-                profilePictureView.setFitWidth(50);
-                Text usernameText = new Text(user.getUsername() + " (" + user.getNickname() + ")");
-                usernameText.setFill(Color.BLUE);
-                Text statusText = new Text(user.getStatus());
-                statusText.setFill(Color.GREEN);
-                userBox.getChildren().addAll(profilePictureView, usernameText, statusText);
-                userBox.setOnMouseClicked(event -> displayUserProfile(user));
+                HBox userBox = createUserBox(user);
+                userBox.setOnMouseClicked(event -> client.showProfileScreen(user));
                 resultsBox.getChildren().add(userBox);
             }
         } else {
             Text noResultsText = new Text("No results found");
-            noResultsText.setFill(Color.RED);
+            noResultsText.getStyleClass().add("no-results-text");
             resultsBox.getChildren().add(noResultsText);
         }
     }
 
-    private void displayUserProfile(UserProfile user) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/user_profile.fxml"));
-            Scene scene = new Scene(loader.load());
-            UserProfileController controller = loader.getController();
-            controller.setClient(client);
-            controller.setUserProfile(user);
-            Stage stage = new Stage();
-            stage.setScene(scene);
-            stage.show();
-        } catch (IOException e) {
-            logger.error("Error loading user profile screen", e);
-        }
+    private HBox createUserBox(UserProfile user) {
+        HBox userBox = new HBox();
+        userBox.getStyleClass().add("user-box");
+        userBox.setPadding(new Insets(10));
+        userBox.setAlignment(Pos.CENTER_LEFT);
+        ImageView profilePictureView = new ImageView(new Image(user.getProfilePicture().toURI().toString()));
+        profilePictureView.setFitHeight(50);
+        profilePictureView.setFitWidth(50);
+        Text usernameText = new Text(user.getUsername() + " (" + user.getNickname() + ")");
+        usernameText.getStyleClass().add("username-text");
+        Text statusText = new Text(user.getStatus());
+        statusText.getStyleClass().add("status-text");
+        userBox.getChildren().addAll(profilePictureView, usernameText, statusText);
+        return userBox;
     }
 
     public void handleSendFriendRequest(UserProfile user) {
         new Thread(() -> {
             try {
-                // Send a friend request to the user
                 client.sendFriendRequest(user.getUserId());
                 Platform.runLater(() -> displayError("Friend request sent successfully"));
-            } catch (IOException e) {
-                System.out.println("Error sending friend request: " + e.getMessage());
+            } catch (Exception e) {
+                logger.error("Error sending friend request: " + e.getMessage());
+                Platform.runLater(() -> displayError("Error sending friend request: " + e.getMessage()));
             }
         }).start();
     }
@@ -217,11 +244,11 @@ public class HomeController {
     public void handleRemoveFriend(UserProfile user) {
         new Thread(() -> {
             try {
-                // Remove the user from the friends list
                 client.removeFriend(user.getUserId());
                 Platform.runLater(() -> displayError("Friend removed successfully"));
-            } catch (IOException e) {
-                System.out.println("Error removing friend: " + e.getMessage());
+            } catch (Exception e) {
+                logger.error("Error removing friend: " + e.getMessage());
+                Platform.runLater(() -> displayError("Error removing friend: " + e.getMessage()));
             }
         }).start();
     }
@@ -231,8 +258,9 @@ public class HomeController {
             try {
                 List<Conversation> conversations = client.getConversations();
                 Platform.runLater(() -> displayConversations(conversations));
-            } catch (IOException e) {
-                System.out.println("Error getting conversations: " + e.getMessage());
+            } catch (Exception e) {
+                logger.error("Error getting conversations: " + e.getMessage());
+                Platform.runLater(() -> displayError("Error getting conversations: " + e.getMessage()));
             }
         }).start();
     }
@@ -253,7 +281,7 @@ public class HomeController {
 
     private void displayFriendRequests(List<UserProfile> friendRequests) {
         friendRequestsBox.getChildren().clear();
-        if (friendRequests.isEmpty()) {
+        if (friendRequests == null) {
             friendRequestsBox.getChildren().add(new Label("No friend requests"));
         } else {
             for (UserProfile userProfile : friendRequests) {
@@ -268,9 +296,29 @@ public class HomeController {
                 Text statusText = new Text(userProfile.getStatus());
                 statusText.setFill(Color.GREEN);
                 Button acceptButton = new Button("Accept");
-                acceptButton.setOnAction(event -> client.acceptFriendRequest(userProfile.getUserId()));
+                acceptButton.setOnAction(event -> {
+                    new Thread(() -> {
+                        try {
+                            client.acceptFriendRequest(userProfile.getUserId());
+                            Platform.runLater(() -> displayError("Friend request accepted successfully"));
+                        } catch (Exception e) {
+                            logger.error("Error accepting friend request: " + e.getMessage());
+                            Platform.runLater(() -> displayError("Error accepting friend request: " + e.getMessage()));
+                        }
+                    }).start();
+                });
                 Button denyButton = new Button("Deny");
-                denyButton.setOnAction(event -> client.denyFriendRequest(userProfile.getUserId()));
+                denyButton.setOnAction(event -> {
+                    new Thread(() -> {
+                        try {
+                            client.denyFriendRequest(userProfile.getUserId());
+                            Platform.runLater(() -> displayError("Friend request denied successfully"));
+                        } catch (Exception e) {
+                            logger.error("Error denying friend request: " + e.getMessage());
+                            Platform.runLater(() -> displayError("Error denying friend request: " + e.getMessage()));
+                        }
+                    }).start();
+                });
                 userBox.getChildren().addAll(profilePictureView, usernameText, statusText, acceptButton, denyButton);
                 friendRequestsBox.getChildren().add(userBox);
             }

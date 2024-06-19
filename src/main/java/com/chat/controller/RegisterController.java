@@ -11,7 +11,7 @@ import javafx.scene.image.ImageView;
 import javafx.stage.FileChooser;
 import java.io.*;
 
-import com.chat.Client;
+import com.chat.client.Client;
 
 public class RegisterController {
     private Client client;

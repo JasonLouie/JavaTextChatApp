@@ -28,8 +28,8 @@ public class SearchUsersMessage extends Message {
         out.writeByte(type);
         out.writeInt(profiles.size());
         logger.info("Wrote message type and profiles size of {}", profiles.size());
-        for (UserProfile user : profiles) {
-            writeProfile(out, SearchUsersMessage.class, user);
+        for (UserProfile profile : profiles) {
+            writeProfile(out, SearchUsersMessage.class, profile);
         }
         logger.info("Serialization of SearchUsersMessage completed.");
     }
