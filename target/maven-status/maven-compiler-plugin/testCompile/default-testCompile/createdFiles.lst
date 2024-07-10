@@ -1,6 +1,8 @@
 chat\ServerClientTest.class
-chat\ClientTest.class
-chat\HomeControllerTest.class
+chat\controllers\FriendRequestsControllerTest.class
 chat\ClientServerTest.class
+chat\controllers\HomeControllerTest.class
 chat\ServerTest.class
 chat\DatabaseTest.class
+chat\client\ClientTest.class
+chat\client\ClientScreenTest.class

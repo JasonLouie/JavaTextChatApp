@@ -9,10 +9,11 @@ import com.chat.database.DatabaseAccessor;
 
 public class Server {
     private ClientManager clientManager;
+    private DatabaseAccessor databaseAccessor;
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
 
     public Server(int port) throws IOException, SQLException {
-        DatabaseAccessor databaseAccessor = new DatabaseAccessor();
+        databaseAccessor = new DatabaseAccessor();
         clientManager = new ClientManager(port, databaseAccessor);
     }
 
@@ -39,5 +40,10 @@ public class Server {
 
     public void close() {
         clientManager.close();
+        try {
+            databaseAccessor.close();
+        } catch (SQLException e) {
+            logger.error("Error closing database connection: {}", e.getSQLState());
+        }
     }
 }

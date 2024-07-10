@@ -1,54 +1,59 @@
 package com.chat.controller;
 
-import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.scene.layout.VBox;
 import javafx.scene.control.Label;
-import javafx.scene.control.ListView;
-import java.util.*;
-
+import com.chat.client.Client;
+import com.chat.models.UserProfile;
+import java.util.List;
+import javafx.application.Platform;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.chat.client.Client;
-import com.chat.models.UserProfile;
-
 public class FriendsController {
+    @FXML
+    private VBox friendsBox;
+
     private Client client;
+    private HomeController homeController;
+
     private static final Logger logger = LoggerFactory.getLogger(FriendsController.class);
-    @FXML
-    private ListView<String> friendsListView;
-    @FXML
-    private Label noFriendsLabel;
 
     public void setClient(Client client) {
         this.client = client;
+        loadFriends();
     }
 
-    public void initialize() {
+    public void setHomeController(HomeController homeController) {
+        this.homeController = homeController;
+    }
+
+    private void loadFriends() {
         new Thread(() -> {
             try {
                 List<UserProfile> friends = client.getFriends();
                 Platform.runLater(() -> displayFriends(friends));
             } catch (Exception e) {
-                logger.error("Error getting friends", e);
-                Platform.runLater(() -> displayError("Error getting friends: " + e.getMessage()));
+                logger.error("Error loading friends", e);
+                Platform.runLater(() -> {
+                    if (homeController != null) {
+                        homeController.displayError("Error loading friends: " + e.getMessage());
+                    }
+                });
             }
         }).start();
     }
-    
+
     private void displayFriends(List<UserProfile> friends) {
-        friendsListView.getItems().clear();
-        if (friends.isEmpty()) {
-            noFriendsLabel.setVisible(true);
-        } else {
+        friendsBox.getChildren().clear();
+        if (friends != null && !friends.isEmpty()) {
             for (UserProfile friend : friends) {
-                friendsListView.getItems().add(friend.getUsername());
+                Label friendLabel = new Label(friend.getUsername() + " (" + friend.getNickname() + ")");
+                friendsBox.getChildren().add(friendLabel);
             }
+        } else {
+            Label noFriendsLabel = new Label("No friends found.");
+            friendsBox.getChildren().add(noFriendsLabel);
         }
-    }
-    
-    private void displayError(String message) {
-        noFriendsLabel.setText(message);
-        noFriendsLabel.setVisible(true);
     }
 }

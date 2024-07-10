@@ -28,7 +28,7 @@ public class FriendRequestsManager {
             RequestMessage message = new RequestMessage(RequestMessage.REQUEST_GET_FRIEND_REQUESTS, client.getUserId());
             connectionManager.sendMessage(message);
             Message response = connectionManager.readResponse();
-            logger.info("Received response from server: {}", response);
+            logger.info("Received response from server");
             if (response instanceof FriendRequestMessage) {
                 FriendRequestMessage friendRequestMessage = (FriendRequestMessage) response;
                 return friendRequestMessage.getFriendRequests();

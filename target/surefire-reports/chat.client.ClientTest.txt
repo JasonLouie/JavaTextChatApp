@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
-Test set: chat.DatabaseTest
+Test set: chat.client.ClientTest
 -------------------------------------------------------------------------------
-Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.455 s -- in chat.DatabaseTest
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.210 s -- in chat.client.ClientTest

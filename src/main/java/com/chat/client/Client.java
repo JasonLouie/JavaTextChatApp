@@ -11,7 +11,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.chat.controller.*;
-import com.chat.messages.*;
 import com.chat.models.*;
 
 public class Client extends Application {
@@ -55,6 +54,30 @@ public class Client extends Application {
         connectionManager.close();
     }
 
+    public ConnectionManager getConnectionManager() {
+        return connectionManager;
+    }
+
+    public UserManager getUserManager() {
+        return userManager;
+    }
+
+    public ConversationManager getConversationManager() {
+        return conversationManager;
+    }
+
+    public FriendManager getFriendManager() {
+        return friendManager;
+    }
+
+    public FriendRequestsManager getFriendRequestsManager() {
+        return friendRequestsManager;
+    }
+
+    public Stage getPrimaryStage() {
+        return primaryStage;
+    }
+
     public UserProfile getUserProfile() {
         return session.getUserProfile();
     }
@@ -71,10 +94,14 @@ public class Client extends Application {
         this.session = session;
     }
 
+    public Session getSession() {
+        return session;
+    }
+
     public void endSession() {
         session = null;
     }
-
+    
     public void showLoginScreen() {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/login.fxml"));
@@ -115,19 +142,6 @@ public class Client extends Application {
         }
     }
 
-    public synchronized void showFriendsScreen() {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/friends.fxml"));
-            Scene scene = new Scene(loader.load());
-            FriendsController controller = loader.getController();
-            controller.setClient(this);
-            primaryStage.setScene(scene);
-            primaryStage.show();
-        } catch (IOException e) {
-            logger.error("Error loading friends screen", e);
-        }
-    }
-
     public synchronized void showProfileScreen(UserProfile user) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/user_profile.fxml"));
@@ -143,16 +157,7 @@ public class Client extends Application {
     }
 
     public synchronized String login(String username, String password) {
-        try {
-            logger.info("Logging in...");
-            LoginMessage message = new LoginMessage(username, password);
-            connectionManager.sendMessage(message);
-            Message response = connectionManager.readResponse();
-            return userManager.handleLoginResponse(response);
-        } catch (IOException e) {
-            logger.error("Error logging in: {}", e.getMessage());
-            return "Error logging in: " + e.getMessage();
-        }
+        return userManager.login(username, password);
     }
 
     public synchronized String logout() throws IOException {
@@ -160,16 +165,7 @@ public class Client extends Application {
     }
 
     public synchronized String register(String username, String nickname, String email, String password, File profilePicture) throws IOException {
-        logger.info("Registering...");
-        try {
-            RegisterMessage message = new RegisterMessage(username, nickname, email, password, profilePicture);
-            connectionManager.sendMessage(message);
-            Message response = connectionManager.readResponse();
-            return userManager.handleRegisterResponse(response);
-        } catch (IOException e) {
-            logger.error("Error registering: {}", e.getMessage());
-            return "Error registering: " + e.getMessage();
-        }
+        return userManager.register(username, nickname, email, password, profilePicture);
     }
 
     public synchronized List<UserProfile> searchUsers(String query) {
@@ -179,31 +175,6 @@ public class Client extends Application {
     public synchronized List<UserProfile> getFriends() {
         return friendManager.getFriends();
     }
-
-    /*
-    public synchronized List<UserProfile> searchUsers(String query) throws IOException {
-        if (!isLoggedIn()) {
-            logger.error("Not logged in");
-            throw new IOException("Not logged in");
-        }
-        logger.info("Searching users of {}...", query);
-        RequestMessage message = new RequestMessage(RequestMessage.REQUEST_SEARCH_USERS, query);
-        message.writeTo(output);
-        Message response = Message.readFrom(input);
-        if (response instanceof SearchUsersMessage) {
-            SearchUsersMessage searchUsersMessage = (SearchUsersMessage) response;
-            logger.info("Received search results");
-            return searchUsersMessage.getProfiles();
-        } else if (response instanceof NoResultsMessage) {
-            NoResultsMessage noResultsMessage = (NoResultsMessage) response;
-            logger.info(noResultsMessage.getMsg());
-            return null;
-        }else {
-            throw new IOException("Invalid response type");
-        }
-    }
-
-    */
 
     public synchronized boolean friendsWith(int userId) throws IOException {
         return friendManager.friendsWith(userId);
@@ -244,104 +215,4 @@ public class Client extends Application {
     public synchronized List<Content> getConversation(int userId) {
         return conversationManager.getConversation(userId);
     }
-    /*
-    public synchronized boolean sendFriendRequest(int userId) throws IOException {
-        if (!isLoggedIn()) {
-            throw new IOException("Not logged in");
-        }
-        logger.info("Sending friend request to user {}...", userId);
-        RequestMessage message = new RequestMessage(RequestMessage.REQUEST_SEND_FRIEND_REQUEST, session.getUserProfile().getUserId(), userId);
-        message.writeTo(output);
-        Message response = Message.readFrom(input);
-        if (response instanceof FriendSuccessMessage) {
-            return ((FriendSuccessMessage) response).isSuccess();
-        } else {
-            throw new IOException("Invalid response type");
-        }
-    }
-    
-    public synchronized boolean cancelFriendRequest(int userId) throws IOException {
-        if (!isLoggedIn()) {
-            throw new IOException("Not logged in");
-        }
-        logger.info("Cancelling friend request...");
-        RequestMessage message = new RequestMessage(RequestMessage.REQUEST_CANCEL_FRIEND_REQUEST, session.getUserProfile().getUserId(), userId);
-        message.writeTo(output);
-        Message response = Message.readFrom(input);
-        if (response instanceof FriendSuccessMessage) {
-            return ((FriendSuccessMessage) response).isSuccess();
-        } else {
-            throw new IOException("Invalid response type");
-        }
-    }
-    
-    public synchronized boolean removeFriend(int userId) throws IOException {
-        if (!isLoggedIn()) {
-            throw new IOException("Not logged in");
-        }
-        logger.info("Removing friend...");
-        RequestMessage message = new RequestMessage(RequestMessage.REQUEST_REMOVE_FRIEND, session.getUserProfile().getUserId(), userId);
-        message.writeTo(output);
-        Message response = Message.readFrom(input);
-        if (response instanceof FriendSuccessMessage) {
-            return ((FriendSuccessMessage) response).isSuccess();
-        } else {
-            throw new IOException("Invalid response type");
-        }
-    }
-
-    // Accept friend request
-    public synchronized boolean acceptFriendRequest(int userId) throws IOException {
-        if (!isLoggedIn()) {
-            throw new IOException("Not logged in");
-        }
-        logger.info("Accepting friend request...");
-        RequestMessage message = new RequestMessage(RequestMessage.REQUEST_ACCEPT_FRIEND_REQUEST, session.getUserProfile().getUserId(), userId);
-        message.writeTo(output);
-        Message response = Message.readFrom(input);
-        if (response instanceof FriendSuccessMessage) {
-            return ((FriendSuccessMessage) response).isSuccess();
-        } else {
-            throw new IOException("Invalid response type");
-        }
-    }
-
-    // Deny friend request
-    public synchronized boolean denyFriendRequest(int userId) throws IOException {
-        if (!isLoggedIn()) {
-            throw new IOException("Not logged in");
-        }
-        logger.info("Denying friend request...");
-        RequestMessage message = new RequestMessage(RequestMessage.REQUEST_DENY_FRIEND_REQUEST, session.getUserProfile().getUserId(), userId);
-        message.writeTo(output);
-        Message response = Message.readFrom(input);
-        if (response instanceof FriendSuccessMessage) {
-            return ((FriendSuccessMessage) response).isSuccess();
-        } else {
-            throw new IOException("Invalid response type");
-        }
-    }
-
-    // Get all friend requests
-    public synchronized List<UserProfile> getFriendRequests() throws IOException {
-        if (!isLoggedIn()) {
-            throw new IOException("Not logged in");
-        }
-        logger.info("Getting friend requests...");
-        RequestMessage message = new RequestMessage(RequestMessage.REQUEST_GET_FRIEND_REQUESTS, session.getUserProfile().getUserId());
-        message.writeTo(output);
-        Message response = Message.readFrom(input);
-        if (response instanceof FriendRequestMessage) {
-            FriendRequestMessage friendRequests = (FriendRequestMessage) response;
-            logger.info("Received friend requests");
-            return friendRequests.getFriendRequests();
-        } else if (response instanceof NoResultsMessage) {
-            NoResultsMessage noResultsMessage = (NoResultsMessage) response;
-            logger.info(noResultsMessage.getMsg());
-            return null;
-        } else {
-            throw new IOException("Invalid response type");
-        }
-    }
-    */
 }

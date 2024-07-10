@@ -22,6 +22,16 @@ public class DatabaseAccessor {
         connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/chatdb", "root", "password");
     }
 
+    public void close() throws SQLException {
+        synchronized (this) {
+            connection.close();
+        }
+    }
+
+    public Connection getConnection() {
+        return connection;
+    }
+
     private ResultSet query(String query, String[] params) throws SQLException {
         synchronized (this) {
             PreparedStatement statement = connection.prepareStatement(query);
@@ -39,12 +49,6 @@ public class DatabaseAccessor {
                 statement.setString(i + 1, params[i]);
             }
             return statement.executeUpdate();
-        }
-    }
-
-    public void close() throws SQLException {
-        synchronized (this) {
-            connection.close();
         }
     }
 
@@ -236,27 +240,25 @@ public class DatabaseAccessor {
     }
 
     public List<Conversation> getConversations(int userId) throws SQLException {
-        String sql = "SELECT " +
-                    "u1.username AS sender_username, " +
-                    "u2.username AS receiver_username, " +
-                    "up1.profile_picture AS sender_profile_picture, " +
-                    "up2.profile_picture AS receiver_profile_picture, " +
-                    "m.message, " +
-                    "m.sender_id, " +
-                    "m.receiver_id " +
-                    "FROM Messages m " +
-                    "JOIN Users u1 ON m.sender_id = u1.id " +
-                    "JOIN Users u2 ON m.receiver_id = u2.id " +
-                    "JOIN UserProfile up1 ON u1.id = up1.user_id " +
-                    "JOIN UserProfile up2 ON u2.id = up2.user_id " +
-                    "WHERE m.id IN ( " +
-                    "    SELECT sub.id " +
-                    "    FROM Messages sub " +
-                    "    WHERE (sub.sender_id = ? OR sub.receiver_id = ?) " +
-                    "    ORDER BY sub.timestamp DESC " +
-                    "    LIMIT 1 " +
-                    ") " +
-                    "GROUP BY u1.id, u2.id";
+        String sql = "SELECT u1.username AS sender_username, "
+                    + "u2.username AS receiver_username, "
+                    + "up1.profile_picture AS sender_profile_picture, "
+                    + "up2.profile_picture AS receiver_profile_picture, "
+                    + "m.message, "
+                    + "m.sender_id, "
+                    + "m.receiver_id "
+                    + "FROM Messages m "
+                    + "JOIN Users u1 ON m.sender_id = u1.id "
+                    + "JOIN Users u2 ON m.receiver_id = u2.id "
+                    + "JOIN UserProfile up1 ON u1.id = up1.user_id "
+                    + "JOIN UserProfile up2 ON u2.id = up2.user_id "
+                    + "WHERE (m.sender_id = ? OR m.receiver_id = ?) "
+                    + "AND m.timestamp = ("
+                    + "SELECT MAX(timestamp) FROM Messages sub "
+                    + "WHERE (sub.sender_id = m.sender_id AND sub.receiver_id = m.receiver_id) "
+                    + "OR (sub.sender_id = m.receiver_id AND sub.receiver_id = m.sender_id)"
+                    + ") "
+                    + "GROUP BY u1.username, u2.username, up1.profile_picture, up2.profile_picture, m.message, m.sender_id, m.receiver_id";
     
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, userId);
@@ -316,7 +318,7 @@ public class DatabaseAccessor {
 
     // Gets UserProfiles of users that sent a friend request to current user
     public List<UserProfile> getFriendRequests(int userId) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement("SELECT u.id, u.username, u.nickname, up.profile_picture, up.bio, up.status FROM Users u JOIN UserProfile up ON u.id = up.user_id WHERE u.id IN (SELECT sender_id FROM Friendships WHERE receiver_id = ?)")) {
+        try (PreparedStatement statement = connection.prepareStatement("SELECT u.id, u.username, u.nickname, up.profile_picture, up.bio, up.status FROM Users u JOIN UserProfile up ON u.id = up.user_id WHERE u.id IN (SELECT sender_id FROM FriendRequests WHERE receiver_id = ?)")) {
             statement.setInt(1, userId);
             synchronized (this) {
                 try (ResultSet result = statement.executeQuery()) {
