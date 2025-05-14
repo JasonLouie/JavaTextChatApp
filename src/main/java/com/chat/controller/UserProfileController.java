@@ -38,32 +38,39 @@ public class UserProfileController {
         displayUserProfile();
     }
 
-    private void displayUserProfile() {
+    public void displayUserProfile() {
         profilePictureView.setImage(new Image(userProfile.getProfilePicture().toURI().toString()));
         usernameLabel.setText(userProfile.getUsername() + " (" + userProfile.getNickname() + ")");
         bioLabel.setText(userProfile.getBio());
         statusLabel.setText(userProfile.getStatus());
-        backButton.setOnAction(event -> handleBackButton());
-        friendButton.setOnAction(event -> handleFriendButton());
-        // Check if the user is already friends with the client
-        new Thread(() -> {
-            try {
-                boolean isFriends = client.friendsWith(userProfile.getUserId());
-                if (isFriends) {
-                    Platform.runLater(() -> friendButton.setText("Remove Friend"));
-                } else {
-                    // Check if there's a pending friend request
-                    boolean hasPendingRequest = client.hasFriendRequest(userProfile.getUserId());
-                    if (hasPendingRequest) {
-                        Platform.runLater(() -> friendButton.setText("Cancel Friend Request"));
+        if (userProfile.getUserId() == (client.getUserId())) {
+            friendButton.setVisible(false);
+            backButton.setVisible(false);
+        } else {
+            backButton.setOnAction(event -> handleBackButton());
+            friendButton.setOnAction(event -> handleFriendButton());
+            friendButton.setVisible(true);
+            backButton.setVisible(true);
+            // Check if the user is already friends with the client
+            new Thread(() -> {
+                try {
+                    boolean isFriends = client.friendsWith(userProfile.getUserId());
+                    if (isFriends) {
+                        Platform.runLater(() -> friendButton.setText("Remove Friend"));
                     } else {
-                        Platform.runLater(() -> friendButton.setText("Add Friend"));
+                        // Check if there's a pending friend request
+                        boolean hasPendingRequest = client.hasFriendRequest(userProfile.getUserId());
+                        if (hasPendingRequest) {
+                            Platform.runLater(() -> friendButton.setText("Cancel Friend Request"));
+                        } else {
+                            Platform.runLater(() -> friendButton.setText("Add Friend"));
+                        }
                     }
+                } catch (IOException e) {
+                    System.out.println("Error checking friendship status: " + e.getMessage());
                 }
-            } catch (IOException e) {
-                System.out.println("Error checking friendship status: " + e.getMessage());
-            }
-        }).start();
+            }).start();
+        }
     }
 
     private void handleBackButton() {

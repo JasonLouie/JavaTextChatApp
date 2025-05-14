@@ -1,5 +1,5 @@
 .username-label {
-    -fx-font-size: 24px;
+    -fx-font-size: 18px;
     -fx-font-weight: bold;
 }
 
@@ -7,7 +7,7 @@
     -fx-padding: 10px;
 }
 
-.user-box {
+.friends-list, .messages-list, .search-results-list {
     -fx-background-color: #f7f7f7;
     -fx-border-color: #ccc;
     -fx-border-width: 1px;
@@ -15,17 +15,76 @@
     -fx-spacing: 10px;
 }
 
-.username-text {
-    -fx-font-size: 18px;
-    -fx-font-weight: bold;
+.friend-item, .message-item, .search-result-item {
+    -fx-background-color: #f7f7f7;
+    -fx-border-color: #ccc;
+    -fx-border-width: 1px;
+    -fx-padding: 10px;
+    -fx-spacing: 10px;
 }
 
-.status-text {
-    -fx-font-size: 14px;
-    -fx-fill: #666;
+.nav-button {
+    -fx-background-color: #2980b9;
+    -fx-text-fill: white;
+    -fx-padding: 10px;
+    -fx-cursor: hand;
+    -fx-border: none;
 }
 
-.no-results-text {
-    -fx-font-size: 18px;
-    -fx-fill: #999;
+.nav-button:hover {
+    -fx-background-color: #3498db;
+}
+
+.logout-button {
+    -fx-background-color: #e74c3c;
+    -fx-text-fill: white;
+}
+
+.logout-button:hover {
+    -fx-background-color: #c0392b;
+}
+
+.friend-requests-box {
+    -fx-padding: 20;
+}
+
+.friend-request-box {
+    -fx-padding: 10;
+    -fx-border-width: 0 0 1 0;
+    -fx-border-color: #ccc;
+}
+
+.profile-picture {
+    -fx-border-radius: 50%;
+}
+
+.request-label {
+    -fx-font-size: 16;
+    -fx-padding: 0 0 0 10;
+}
+
+.accept-button, .deny-button {
+    -fx-padding: 5 10;
+    -fx-font-size: 14;
+    -fx-cursor: hand;
+}
+
+.accept-button {
+    -fx-background-color: #4CAF50;
+    -fx-text-fill: #fff;
+}
+
+.deny-button {
+    -fx-background-color: #f44336;
+    -fx-text-fill: #fff;
+}
+
+.no-requests-label {
+    -fx-font-size: 16;
+    -fx-text-fill: #888;
+    -fx-padding: 20;
+}
+
+.accept-button:hover, .deny-button:hover {
+    -fx-opacity: 0.8;
 }

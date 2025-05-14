@@ -1,5 +1,6 @@
 package com.chat.client;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import org.slf4j.Logger;
@@ -50,6 +51,32 @@ public class UserManager {
         } else {
             logger.error("Invalid response type");
             throw new IOException("Invalid response type");
+        }
+    }
+
+    public String login(String username, String password) {
+        try {
+            logger.info("Logging in...");
+            LoginMessage message = new LoginMessage(username, password);
+            connectionManager.sendMessage(message);
+            Message response = connectionManager.readResponse();
+            return handleLoginResponse(response);
+        } catch (IOException e) {
+            logger.error("Error logging in: {}", e.getMessage());
+            return "Error logging in: " + e.getMessage();
+        }
+    }
+
+    public String register(String username, String nickname, String email, String password, File profilePicture) throws IOException {
+        logger.info("Registering...");
+        try {
+            RegisterMessage message = new RegisterMessage(username, nickname, email, password, profilePicture);
+            connectionManager.sendMessage(message);
+            Message response = connectionManager.readResponse();
+            return handleRegisterResponse(response);
+        } catch (IOException e) {
+            logger.error("Error registering: {}", e.getMessage());
+            return "Error registering: " + e.getMessage();
         }
     }
 
