@@ -1,0 +1,15 @@
+com\chat\client\UserManager.class
+com\chat\controller\RegisterController.class
+com\chat\controller\ConversationsController.class
+com\chat\controller\SearchUsersController.class
+com\chat\client\Client.class
+com\chat\client\ConnectionManager.class
+com\chat\client\FriendRequestsManager.class
+com\chat\controller\UserProfileController.class
+com\chat\controller\FriendsController.class
+com\chat\client\ConversationManager.class
+com\chat\controller\FriendRequestsController.class
+com\chat\controller\HomeController.class
+com\chat\client\Session.class
+com\chat\controller\LoginController.class
+com\chat\client\FriendManager.class

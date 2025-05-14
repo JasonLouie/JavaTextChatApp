@@ -1,0 +1,4 @@
+chat\controllers\FriendRequestsControllerTest.class
+chat\client\ClientTest.class
+chat\controllers\HomeControllerTest.class
+chat\client\ClientScreenTest.class
