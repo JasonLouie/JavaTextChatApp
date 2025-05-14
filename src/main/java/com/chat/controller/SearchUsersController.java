@@ -67,7 +67,11 @@ public class SearchUsersController {
         if (results != null) {
             for (UserProfile user : results) {
                 HBox userBox = createUserBox(user);
+<<<<<<< HEAD
                 userBox.setOnMouseClicked(_ -> client.showProfileScreen(user));
+=======
+                userBox.setOnMouseClicked(event -> client.showProfileScreen(user));
+>>>>>>> 23ed6ab2476e60aa1fb0bd279282a30056e505e3
                 searchResultsBox.getChildren().add(userBox);
             }
         } else {
